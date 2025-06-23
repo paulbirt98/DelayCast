@@ -2,10 +2,13 @@ import requests
 import json
 import base64  # Import base64 module for encoding
 import time
+import os
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
 # HSP API URL for Service Metrics
-url = "https://hsp-prod.rockshore.net/api/v1/serviceMetrics"
+metrics_url = "https://hsp-prod.rockshore.net/api/v1/serviceMetrics"
+details_url = "https://hsp-prod.rockshore.net/api/v1/serviceDetails"
 
 # My National Rail Data login details
 email = "paulbirt1998@gmail.com"
@@ -21,6 +24,7 @@ headers = {
     "Authorization": f"Basic {auth_header}"
 }
 
+#Function to fetch all the RIDs for trains within a given date range
 def fetch_rids(payload, date, time_period):
     """
     Fetch RIDs from the HSP API for a given date and time period.
@@ -40,7 +44,7 @@ def fetch_rids(payload, date, time_period):
     records = []
 
     try:
-        response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=120)
+        response = requests.post(metrics_url, headers=headers, data=json.dumps(payload), timeout=120)
 
         if response.status_code == 502:
             print(f"502 Bad Gateway error on {date} ({str(time_period)}).")
@@ -64,10 +68,65 @@ def fetch_rids(payload, date, time_period):
         for service in services:
             rids = service.get("serviceAttributesMetrics", {}).get("rids", [])
             for rid in rids:
-                records.append({"Date": date, "Time Period": str(time_period), "RID": rid})
+                records.append({"RID": rid, "Date": date, "Time Period": str(time_period)})
 
     except requests.exceptions.RequestException as e:
         print(f"API Request Error for {date} ({str(time_period)}): {e}")
 
-    time.sleep(5)  # added to prevent overwhelming the API
+    time.sleep(2)  # added to prevent overwhelming the API
     return records
+
+#Function to fetch all details for a train journey given the RID
+def fetch_train_details(rid):
+    """
+    Fetch service details from the HSP API for a given RID.
+
+    Args:
+    - rid (str): The service RID.
+
+    Returns:
+    - dict: Extracted train journey details.
+    """
+    try:
+        response = requests.post(details_url, headers=headers, json={"rid": rid}, timeout=30)
+
+        if response.status_code == 502:
+            print(f"502 Bad Gateway error on {rid}.")
+            return None
+
+        response.raise_for_status()
+        data = response.json()
+
+        # Extract relevant train details
+        details = data.get("serviceAttributesDetails", {})
+        date_of_service = details.get("date_of_service", "-")
+        stops = details.get("locations", [])
+
+        # Create a structured dictionary for the journey
+        journey_record = {
+            "Date": date_of_service,
+            "RID": rid,
+            "TOC": details.get("toc_code", "-"),
+        }
+
+        # Extract stop-wise data
+        for i, stop in enumerate(stops):
+            station = stop.get("location", "-")
+    
+            if i > 0:  # Skip arrival times for first station
+                journey_record[f"{station} Scheduled Arrival Time"] = stop.get("gbtt_pta", "-")
+                journey_record[f"{station} Actual Arrival Time"] = stop.get("actual_ta", "-")
+
+            if i < len(stops) - 1:  # Skip departure times for last station
+                journey_record[f"{station} Scheduled Departure Time"] = stop.get("gbtt_ptd", "-")
+                journey_record[f"{station} Actual Departure Time"] = stop.get("actual_td", "-")
+
+            journey_record[f"{station} LC Reason"] = stop.get("late_canc_reason", "-")
+        
+        # Print success message
+        print(f"Success for {rid} - {date_of_service}")
+        return journey_record
+
+    except requests.exceptions.RequestException as e:
+        print(f"API Request Error for RID {rid}, {date_of_service}: {e}")
+        return None
