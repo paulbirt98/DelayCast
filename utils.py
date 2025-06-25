@@ -5,6 +5,7 @@ import time
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+import pandas as pd
 
 # HSP API URL for Service Metrics
 metrics_url = "https://hsp-prod.rockshore.net/api/v1/serviceMetrics"
@@ -117,7 +118,7 @@ def fetch_train_details(rid):
                 journey_record[f"{station} Scheduled Arrival Time"] = stop.get("gbtt_pta", "-")
                 journey_record[f"{station} Actual Arrival Time"] = stop.get("actual_ta", "-")
 
-            if i < len(stops) - 1:  # Skip departure times for last station
+            if i < (len(stops) - 1):  # Skip departure times for last station
                 journey_record[f"{station} Scheduled Departure Time"] = stop.get("gbtt_ptd", "-")
                 journey_record[f"{station} Actual Departure Time"] = stop.get("actual_td", "-")
 
@@ -130,3 +131,48 @@ def fetch_train_details(rid):
     except requests.exceptions.RequestException as e:
         print(f"API Request Error for RID {rid}, {date_of_service}: {e}")
         return None
+    
+def convert_to_datetime(date, time):
+    """
+    Combines a date and time to form a datetime object
+
+    Args:
+    date and time(float) to be combined
+
+    Returns:
+    a datetime object
+    """
+    return pd.to_datetime(f"{date} {int(time):04}", format="%Y-%m-%d %H%M")
+
+def calculate_delay(scheduled_time, actual_time):
+    """
+    Calculates the delay at a station by comparing the scheduled time and actual time
+
+    Args:
+    - scheduled_time (datetime): this is the scheduled departure time, unless the station in question is the 
+      terminus in which case this is the scheduled arrival time.
+    - actual_time (datetime): this is the actual recorded departure time, unless the station in question is the 
+      terminus in which case this is the actual recorded arrival time.
+
+    Returns:
+    the delay in minutes (float)
+    """
+    delay = (actual_time - scheduled_time).total_seconds() / 60
+
+    #if more than 12 hours early assume it crosses midnight and add 24 hours to the calculation
+    if delay < -720:  
+        delay += 1440 
+
+    return delay
+
+def calculate_delay_classification(delay_minutes):
+    """
+    """
+    if delay_minutes < 5:
+        return "None"
+    elif 5 <= delay_minutes < 15:
+        return "Mild"
+    elif 15 <= delay_minutes < 30:
+        return "Moderate"
+    elif delay_minutes >= 30:
+        return "Severe"
