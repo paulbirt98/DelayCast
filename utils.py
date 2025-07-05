@@ -74,7 +74,7 @@ def fetch_rids(payload, date, time_period):
     except requests.exceptions.RequestException as e:
         print(f"API Request Error for {date} ({str(time_period)}): {e}")
 
-    time.sleep(2)  # added to prevent overwhelming the API
+    time.sleep(1)  # added to prevent overwhelming the API
     return records
 
 #Function to fetch all details for a train journey given the RID
@@ -169,10 +169,12 @@ def calculate_delay_classification(delay_minutes):
     """
     """
     if delay_minutes < 5:
-        return "None"
+        return "Not Delayed"
     elif 5 <= delay_minutes < 15:
-        return "Mild"
+        return "Mild Delay"
     elif 15 <= delay_minutes < 30:
-        return "Moderate"
+        return "Moderate Delay"
     elif delay_minutes >= 30:
-        return "Severe"
+        return "Severe Delay"
+    elif pd.isna(delay_minutes):
+        return "Issue Classifying"

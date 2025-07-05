@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # Define start and end dates
-start_date = datetime(2023, 6, 1)
+start_date = datetime(2015, 6, 1)
 end_date = datetime(2025, 5, 31) 
 
 # Generate a list all dates within range
@@ -40,6 +40,6 @@ for date in date_list:
 df = pd.DataFrame(rid_records)
 
 # Save data to CSV
-df.to_csv("EDA_EUS_TO_LIV_RIDS_2023-25.csv", index=False)
+df.to_csv("EDA_EUS_TO_LIV_RIDS_2015-25.csv", index=False)
 
 #
