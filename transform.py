@@ -1,11 +1,12 @@
 import pandas as pd
 from utils import convert_to_datetime, cut_non_core_stations, calculate_delay, calculate_delay_classification
+from weather_call import station_coordinates
 
 #load the data to a dataframe
 service_details_df = pd.read_csv("eus_liv_details_2015-25.csv")
 
 #trim the data to only include target / core stations
-core_stations = ['EUS', 'WFJ', 'MKC', 'RUG', 'NUN', 'TAM', 'LTV', 'STA', 'CRE', 'RUN', 'LIV']
+core_stations = list(station_coordinates.keys())
 
 try:
     processed_service_details_df = service_details_df[

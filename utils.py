@@ -6,6 +6,9 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import pandas as pd
+import openmeteo_requests
+import requests_cache
+from retry_requests import retry
 
 # HSP API URL for Service Metrics
 metrics_url = "https://hsp-prod.rockshore.net/api/v1/serviceMetrics"
@@ -159,16 +162,18 @@ def calculate_delay(scheduled_time, actual_time):
     """
     delay = (actual_time - scheduled_time).total_seconds() / 60
 
-    #if more than 12 hours early assume it crosses midnight and add 24 hours to the calculation
-    if delay < -720:  
-        delay += 1440 
+    #if more than 12 hours early  or late assume it was a recording error
+    if delay < -720 or delay > 720:  
+        delay = None
 
     return delay
 
 def calculate_delay_classification(delay_minutes):
     """
     """
-    if delay_minutes < 5:
+    if pd.isna(delay_minutes):
+        return "Issue Classifying"
+    elif delay_minutes < 5:
         return "Not Delayed"
     elif 5 <= delay_minutes < 15:
         return "Mild Delay"
@@ -176,8 +181,6 @@ def calculate_delay_classification(delay_minutes):
         return "Moderate Delay"
     elif delay_minutes >= 30:
         return "Severe Delay"
-    elif pd.isna(delay_minutes):
-        return "Issue Classifying"
     
 def cut_non_core_stations(dataframe, core_stations):
     """
@@ -194,3 +197,90 @@ def cut_non_core_stations(dataframe, core_stations):
 
     ordered_columns = mandatory_columns + station_columns
     return ordered_columns
+
+def weather_call(start_date, end_date, latitude, longitude, station):
+    """
+    """
+    #variable to handle rate limit exceedance
+    rate_limit_message = "Minutely API request limit exceeded"
+    wait_time = 60
+    retries = 5
+
+    # Setup the Open-Meteo API client with cache and retry on error
+    cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
+    retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
+    openmeteo = openmeteo_requests.Client(session = retry_session)
+
+    # Make sure all required weather variables are listed here
+    # The order of variables in hourly or daily is important to assign them correctly below
+    url = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "start_date": start_date,
+        "end_date": end_date,
+        "hourly": ["temperature_2m", "snowfall", "snow_depth", "rain", "precipitation", "apparent_temperature", "weather_code", "is_day", "cloud_cover", "relative_humidity_2m", "wind_speed_10m", "wind_gusts_10m"],
+        "timezone": "Europe/London"
+    }
+
+    for tries in range(retries):
+        try:
+            responses = openmeteo.weather_api(url, params=params)
+            break
+        except Exception as e:
+            print(f"Request failed: {e}")
+            if rate_limit_message in str(e):
+                print(f"Rate limit exceeded, waiting {wait_time} before retrying")
+                time.sleep(wait_time)
+            else:
+                raise Exception("Issue calling weather API")
+
+
+    # Process first location. Add a for-loop for multiple locations or weather models
+    response = responses[0]
+    print(f"Coordinates {response.Latitude()}°N {response.Longitude()}°E")
+    print(f"Elevation {response.Elevation()} m asl")
+    print(f"Timezone {response.Timezone()}{response.TimezoneAbbreviation()}")
+    print(f"Timezone difference to GMT+0 {response.UtcOffsetSeconds()} s")
+
+    # Process hourly data. The order of variables needs to be the same as requested.
+    hourly = response.Hourly()
+    hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
+    hourly_snowfall = hourly.Variables(1).ValuesAsNumpy()
+    hourly_snow_depth = hourly.Variables(2).ValuesAsNumpy()
+    hourly_rain = hourly.Variables(3).ValuesAsNumpy()
+    hourly_precipitation = hourly.Variables(4).ValuesAsNumpy()
+    hourly_apparent_temperature = hourly.Variables(5).ValuesAsNumpy()
+    hourly_weather_code = hourly.Variables(6).ValuesAsNumpy()
+    hourly_is_day = hourly.Variables(7).ValuesAsNumpy()
+    hourly_cloud_cover = hourly.Variables(8).ValuesAsNumpy()
+    hourly_relative_humidity_2m = hourly.Variables(9).ValuesAsNumpy()
+    hourly_wind_speed_10m = hourly.Variables(10).ValuesAsNumpy()
+    hourly_wind_gusts_10m = hourly.Variables(11).ValuesAsNumpy()
+
+    hourly_data = {"date": pd.date_range(
+        start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
+        end = pd.to_datetime(hourly.TimeEnd(), unit = "s", utc = True),
+        freq = pd.Timedelta(seconds = hourly.Interval()),
+        inclusive = "left"
+    )}
+
+    hourly_data["temperature_2m"] = hourly_temperature_2m
+    hourly_data["snowfall"] = hourly_snowfall
+    hourly_data["snow_depth"] = hourly_snow_depth
+    hourly_data["rain"] = hourly_rain
+    hourly_data["precipitation"] = hourly_precipitation
+    hourly_data["apparent_temperature"] = hourly_apparent_temperature
+    hourly_data["weather_code"] = hourly_weather_code
+    hourly_data["is_day"] = hourly_is_day
+    hourly_data["cloud_cover"] = hourly_cloud_cover
+    hourly_data["relative_humidity_2m"] = hourly_relative_humidity_2m
+    hourly_data["wind_speed_10m"] = hourly_wind_speed_10m
+    hourly_data["wind_gusts_10m"] = hourly_wind_gusts_10m
+
+    hourly_dataframe = pd.DataFrame(data = hourly_data)
+
+    #add column for station code
+    hourly_dataframe['Station'] = station
+
+    return hourly_dataframe
