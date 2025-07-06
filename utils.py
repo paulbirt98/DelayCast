@@ -178,3 +178,19 @@ def calculate_delay_classification(delay_minutes):
         return "Severe Delay"
     elif pd.isna(delay_minutes):
         return "Issue Classifying"
+    
+def cut_non_core_stations(dataframe, core_stations):
+    """
+    """
+    mandatory_columns = ['RID', 'Date', 'TOC']
+    station_columns = []
+
+    for i, station in enumerate(core_stations):
+        if i < (len(core_stations)-1):
+            cols = [col for col in dataframe.columns if station in col]
+        else: 
+            cols = [col for col in dataframe.columns if station in col and 'Departure' not in col]
+        station_columns.extend(cols)
+
+    ordered_columns = mandatory_columns + station_columns
+    return ordered_columns
