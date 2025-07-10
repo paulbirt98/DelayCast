@@ -1,1 +1,3 @@
 # DelayCast
+
+DelayCast is an ongoing project building a machine learning pipeline to predict rail delay risk on selected UK routes based on factors such as weather conditions and temporal factors. The goal is to deploy an interactive web dashboard featuring interactive map visualisation, route-level risk predictions, and explanation of causes. Current development focuses on data engineering, feature selection, and model training, with upcoming integration of a Flask backend and React frontend. This repository showcases end-to-end ML deployment skills for predictive analytics as well as full-stack web development and API integration.
