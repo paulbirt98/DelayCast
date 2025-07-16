@@ -5,7 +5,7 @@ from sklearn.preprocessing import LabelEncoder
 df = pd.read_csv('../eus_liv_joined.csv')
 
 #define features and target to be checked against
-x = df[['is_day', 'weather_code', 'Year', 'Month', 'Day', 'Hour',]]
+x = df[['is_day', 'weather_code', 'Year', 'Month', 'Day', 'Hour']]
 y = df['Delay Classification']
 
 #features to integers
