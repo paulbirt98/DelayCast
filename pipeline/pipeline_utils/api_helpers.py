@@ -53,10 +53,14 @@ def call_service_metrics_api(payload, date, time_period):
 
     except requests.exceptions.RequestException as e:
         print(f"API Request Error for {date} ({str(time_period)}): {e}")
+        return [] 
+    except Exception as e:
+        print(f"Unexpected error for {date} ({time_period}): {e}")
+        return [] 
 
     return records
 
-def fetch_rids(from_location, to_location, from_date, to_date, testing=False, max_workers=MAX_WORKERS):
+def fetch_rids(from_location, to_location, atoc, from_date, to_date, testing=False, max_workers=MAX_WORKERS):
     """
     A function to loop through each date between from_date and to_date (inclusive), and through each hour slot between the given 
     FROM_TIME and TO_TIME (inclusive) as set in config.py
@@ -82,9 +86,13 @@ def fetch_rids(from_location, to_location, from_date, to_date, testing=False, ma
     # Placeholder for the dataset returned
     rid_records = []
 
+    #placeholder for the arguments needed for API call
+    api_args = []
+
     # Loop through each date
     for date in date_list:
         
+        #get the day of week as an integer and assign appropriately
         day_index = datetime.strptime(date, "%Y-%m-%d").weekday()
         days = "WEEKDAY" if day_index <= 4 else "SATURDAY" if day_index == 5 else "SUNDAY"
 
@@ -101,12 +109,31 @@ def fetch_rids(from_location, to_location, from_date, to_date, testing=False, ma
                 "from_date": date, 
                 "to_date": date,
                 "days": days, 
-                "toc_filter": ["VT"]
+                "toc_filter": [atoc]
             }
             
-            rid_records += call_service_metrics_api(payload, date, hour_slot_start)
-            rid_records_df = pd.DataFrame(rid_records)
+            api_args.append((payload, date, hour_slot_start))
     
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        #list of future objects with api responses
+        futures =  [
+            executor.submit(call_service_metrics_api, payload, date, hour_slot_start)
+            for payload, date, hour_slot_start in api_args
+            ]
+        
+        #iterate over futures as each call is completed
+        for future in as_completed(futures):
+            #if data is retrieved add it to rid_records
+            try:
+                api_result = future.result()
+                if api_result:
+                    rid_records.extend(api_result)
+            except Exception as e:
+                print(f"Error in fetching RID via thread: {e}")
+    
+    #convert to df
+    rid_records_df = pd.DataFrame(rid_records)
+
     return rid_records_df
 
 def call_service_details_api(rid):
@@ -162,6 +189,9 @@ def call_service_details_api(rid):
 
     except requests.exceptions.RequestException as e:
         print(f"API Request Error for RID {rid}: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected Error for {rid}: {e}")
         return None
     
 def fetch_train_times(rids_df, max_workers=MAX_WORKERS):

@@ -55,4 +55,4 @@ FROM_TIME = 6
 TO_TIME = 22
 
 #max workers for thread pool executor
-MAX_WORKERS = 2
+MAX_WORKERS = 3
