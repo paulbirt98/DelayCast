@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 start_date = datetime(2015, 6, 1)
 end_date = datetime(2025, 5, 31) 
 
-# Generate a list all dates within range
+# Generate a list of all dates within that range
 date_list = [(start_date + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end_date - start_date).days + 1)]
 
 # Placeholder for the dataset returned

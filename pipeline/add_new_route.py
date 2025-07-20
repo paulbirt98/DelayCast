@@ -10,18 +10,18 @@ def parse_cl_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--from_location", type=str, required=True)
     parser.add_argument("--to_location", type=str, required=True)
-    parser.add_argument("--atoc", type=str, required=True)
+    parser.add_argument("--toc", type=str, required=True)
     parser.add_argument("--testing", action="store_true")
     return parser.parse_args()
 
 args = parse_cl_arguments()
 from_location = args.from_location.upper()
 to_location = args.to_location.upper()
-atoc = args.atoc.upper()
+toc = args.toc.upper()
 testing = args.testing
 
 #call api helper functions and assign
-rid_df = fetch_rids(from_location, to_location, atoc, FROM_DATE, TO_DATE, testing=testing)
+rid_df = fetch_rids(from_location, to_location, toc, FROM_DATE, TO_DATE, testing=testing)
 train_data_df = fetch_train_times(rid_df)
 
 #build filepath to save raw data to

@@ -56,3 +56,13 @@ TO_TIME = 22
 
 #max workers for thread pool executor
 MAX_WORKERS = 3
+
+#Threshold for removing infrequent station codes (percentage)
+FREQ_THRESHOLD = 0.05
+
+#For use in delay classification
+RECORDING_ERROR_MIN = -720
+RECORDING_ERROR_MAX = 720
+NO_DELAY_UPPER_BOUNDARY = 5
+MILD_DELAY_UPPER_BOUNDARY = 15
+MODERATE_DELAY_UPPER_BOUNDARY = 30
