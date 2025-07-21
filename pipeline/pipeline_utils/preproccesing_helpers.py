@@ -1,7 +1,23 @@
 import pandas as pd
-from pipeline_utils.config import FREQ_THRESHOLD, RECORDING_ERROR_MIN, RECORDING_ERROR_MAX, NO_DELAY_UPPER_BOUNDARY, MILD_DELAY_UPPER_BOUNDARY, MODERATE_DELAY_UPPER_BOUNDARY
+from pipeline_utils.config import (
+    FREQ_THRESHOLD, 
+    RECORDING_ERROR_MIN, 
+    RECORDING_ERROR_MAX, 
+    NO_DELAY_UPPER_BOUNDARY, 
+    MILD_DELAY_UPPER_BOUNDARY, 
+    MODERATE_DELAY_UPPER_BOUNDARY, 
+    METADATA, 
+    RAW_DATA,
+    INTERIM_DATA,
+    INDIVIDUAL_ROUTES,
+    ALL_ROUTES_AMALG
+)
 import json
 from pathlib import Path
+import openmeteo_requests
+import requests_cache
+from retry_requests import retry
+import time
 
 def convert_to_datetime(journeys_df):
     """
@@ -31,16 +47,16 @@ def convert_to_datetime(journeys_df):
 def drop_low_freq_stations(journeys_df, from_location, to_location):
     """
     Removes any column relating to stations which appear less frequently (as a percentage fo total rows in the passed dataframe)
-    than FREQ_THRESHOLD as set in config.py. Also saves a list of all station codes that do pass the threshold to a json file in 
-    data/semi_processed.
+    than FREQ_THRESHOLD as set in config.py. The resulting dataframe is saved as a csv file in data/semi_processed.
 
     Args:
     - journeys_df (dataframe): a dataframe containing details of all train journeys on a given route
-    - from_location (str): the origin station code, used in naming the json file
-    - to_location (str): the terminus station code, used in naming the json file
+    - from_location (str): the origin station code
+    - to_location (str): the terminus station code
 
     Returns:
     - journeys_df (dataframe): the same dataframe passed in as an argument but with all low frequency stations removed
+    - unique_station_codes (list[str]): a list of all unique station codes that exceed the threshold for inclusion
     """
     
     #a set of unique station codes
@@ -60,12 +76,50 @@ def drop_low_freq_stations(journeys_df, from_location, to_location):
     #convert unique codes to a list and then save to a json file
     unique_station_codes = list(unique_station_codes)
 
-    with open(f"{from_location}_{to_location}_station_codes.json", "w") as json_file:
-        json.dump(unique_station_codes, json_file)
+    #get filepath and save
+    filepath = INTERIM_DATA / f'{from_location}_{to_location}_saved_stations.csv'
+    journeys_df.to_csv(filepath, index=False)
 
-    return journeys_df
+    return journeys_df, unique_station_codes
 
-def load_json_to_list(from_location, to_location):
+def create_station_coords_json(station_codes, coords_df, from_location, to_location):
+    """
+    creates and saves a json file to the data/metadata folder containing each station in the final dataset for a given route
+    along with its latitude and longitude. a dictionary representation of this is returned.
+
+    Args:
+    - station_codes (list[str]): a list of station codes
+    - coords_df (dataframe): a dataframe containing all UK station codes and their corresponding coordinates
+    - from_location (str): the origin station code
+    - to_location (str): the terminus station code
+
+    Returns:
+    - station_coords_dict (dict): a dictionary of each station code along a route and its corresponding coordinates
+    
+    """
+    #filepath to save json's to
+    file_path = METADATA / f"{from_location}_{to_location}_stations.json"
+
+    #filter for only the rows where the station is in the final dataset for the relevant route
+    station_coords_df = coords_df[coords_df['crs_code'].isin(station_codes)]
+
+    #create a dictionary format for saving as json
+    station_coords_dict = {}
+
+    for _, row in station_coords_df.iterrows():
+        code =  row['crs_code']
+        latitude = row['lat']
+        longitude = row['long']
+        station_coords_dict[code] = {'latitude': latitude, 'longitude': longitude}
+
+    with open(file_path, "w") as json_file:
+        json.dump(station_coords_dict, json_file)
+
+    print('Coords dictionary created and saved to metadata as json')
+
+    return station_coords_dict
+
+def load_json_to_dict(from_location, to_location):
     """
     Loads the relevant json file to the script containing stations on a route, given the from_location and to_location passed in.
 
@@ -74,14 +128,27 @@ def load_json_to_list(from_location, to_location):
     - to_location (str): the terminus station code
 
     Returns:
-    - station_codes (list[str]): A list of all saved station codes on a route
+    - station_codes (dict): A dictionary of all saved station codes on a route and their respective coordinates
     """
-    with open(f"{from_location}_{to_location}_station_codes", "r") as file:
-        station_codes = json.load(file)
-    
-    return station_codes
+    file_path = METADATA / f"{from_location}_{to_location}_stations.json"
 
-def to_long_format(journeys_df, station_codes):
+    try:
+        with open(file_path, "r") as file:
+            station_codes = json.load(file)
+        
+        return station_codes
+    
+    except FileNotFoundError:
+        print(f"Error loading json file. File not found at path: {file_path}")
+        return {}
+    except PermissionError:
+        print(f"Permission error in accessing file at {file_path}, please ensure it is not open elsewhere")
+        return {}
+    except Exception as e:
+        print(f"Unexcpeted error loading file at {file_path}: {e}")
+        return {}
+
+def to_long_format(journeys_df, station_codes, from_location, to_location):
     """
     Converts a dataframe of train journeys to long format. I.e. each row will now relate to a a single train passing a single station,
     rather than a row relating to an entire route.
@@ -89,6 +156,8 @@ def to_long_format(journeys_df, station_codes):
     Args:
     - journeys_df (dataframe): a dataframe containing details of all train journeys on a given route
     - station_codes (list[str]): A list of strings containing the three letter CRS code identifying all stations
+    - from_location (str): the origin station code
+    - to_location (str): the terminus station code
 
     Returns:
     - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
@@ -142,6 +211,10 @@ def to_long_format(journeys_df, station_codes):
     stoppings_df = pd.concat(dataframes, ignore_index=True)
     stoppings_df = stoppings_df[['rid', 'date', 'toc', 'station', 'scheduled_time', 'actual_time', 'lc_reason']]
 
+    #get filepath and save
+    filepath = INTERIM_DATA / f'{from_location}_{to_location}_long_format.csv'
+    stoppings_df.to_csv(filepath, index=False)
+
     return stoppings_df
 
 def clean(stoppings_df):
@@ -155,8 +228,6 @@ def clean(stoppings_df):
     Returns:
     - stoppings_df (dataframe): the same dataframe as was passed in but with missing values removed
     """
-    print(f"Cleaning dataframe, shape before: {stoppings_df.shape}")
-
     stoppings_df['scheduled_time'] = pd.to_datetime(stoppings_df['scheduled_time'], errors='coerce')
     stoppings_df['actual_time'] = pd.to_datetime(stoppings_df['actual_time'], errors='coerce')
 
@@ -168,8 +239,6 @@ def clean(stoppings_df):
     stoppings_df['toc'] = stoppings_df['toc'].astype(str)
 
     stoppings_df.dropna(subset=['toc', 'station', 'scheduled_time', 'actual_time'], inplace=True)
-
-    print(f"Shape after: {stoppings_df.shape}")
 
     return stoppings_df
 
@@ -249,3 +318,191 @@ def calculate_delay_classification(delay_minutes):
     elif delay_minutes >= MODERATE_DELAY_UPPER_BOUNDARY:
         return "Severe Delay"
     
+def openmeteo_api_call(start_date, end_date, station_code, latitude, longitude):
+    """
+    Calls the openmeteo historical weather API to retrieve hourly weather variables for the given station location for the 
+    given date range
+
+    Args:
+    - start_date (str): the first date in the date range to be requested (inclusive)
+    - end_date (str): the last date in the date range to be requested (inclusive)
+    - station_code (str): the CRS station code
+    - latitude (float): the latitude of the location requested
+    - longitude (float): the longitude of the location requested
+
+    Returns:
+    - hourly_dataframe (dataframe): a dataframe of weather for the given location and date range (hourly)
+    """
+    #variable to handle rate limit exceedance
+    rate_limit_message = "Minutely API request limit exceeded"
+    wait_time = 60
+    retries = 5
+
+    # Setup the Open-Meteo API client with cache and retry on error
+    cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
+    retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
+    openmeteo = openmeteo_requests.Client(session = retry_session)
+
+    # Make sure all required weather variables are listed here
+    # The order of variables in hourly or daily is important to assign them correctly below
+    url = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "start_date": start_date,
+        "end_date": end_date,
+        "hourly": ["temperature_2m", "snowfall", "snow_depth", "rain", "precipitation", "apparent_temperature", "weather_code", "is_day", "cloud_cover", "relative_humidity_2m", "wind_speed_10m", "wind_gusts_10m"],
+        "timezone": "Europe/London"
+    }
+
+    for tries in range(retries):
+        try:
+            responses = openmeteo.weather_api(url, params=params)
+            break
+        except Exception as e:
+            print(f"Request failed: {e}")
+            if rate_limit_message in str(e):
+                print(f"Rate limit exceeded, waiting {wait_time} before retrying")
+                time.sleep(wait_time)
+            else:
+                raise Exception("Issue calling weather API")
+
+
+    # Process first location. Add a for-loop for multiple locations or weather models
+    response = responses[0]
+    print(f"Coordinates {response.Latitude()}°N {response.Longitude()}°E")
+    print(f"Elevation {response.Elevation()} m asl")
+    print(f"Timezone {response.Timezone()}{response.TimezoneAbbreviation()}")
+    print(f"Timezone difference to GMT+0 {response.UtcOffsetSeconds()} s")
+
+    # Process hourly data. The order of variables needs to be the same as requested.
+    hourly = response.Hourly()
+    hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
+    hourly_relative_humidity_2m = hourly.Variables(1).ValuesAsNumpy()
+    hourly_dew_point_2m = hourly.Variables(2).ValuesAsNumpy()
+    hourly_apparent_temperature = hourly.Variables(3).ValuesAsNumpy()
+    hourly_rain = hourly.Variables(4).ValuesAsNumpy()
+    hourly_snowfall = hourly.Variables(5).ValuesAsNumpy()
+    hourly_snow_depth = hourly.Variables(6).ValuesAsNumpy()
+    hourly_surface_pressure = hourly.Variables(7).ValuesAsNumpy()
+    hourly_cloud_cover = hourly.Variables(8).ValuesAsNumpy()
+    hourly_soil_temperature_0_to_7cm = hourly.Variables(9).ValuesAsNumpy()
+    hourly_soil_moisture_0_to_7cm = hourly.Variables(10).ValuesAsNumpy()
+    hourly_wind_speed_10m = hourly.Variables(11).ValuesAsNumpy()
+    hourly_wind_direction_10m = hourly.Variables(12).ValuesAsNumpy()
+    hourly_wind_gusts_10m = hourly.Variables(13).ValuesAsNumpy()
+
+    hourly_data = {"date": pd.date_range(
+        start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
+        end = pd.to_datetime(hourly.TimeEnd(), unit = "s", utc = True),
+        freq = pd.Timedelta(seconds = hourly.Interval()),
+        inclusive = "left"
+    )}
+
+    hourly_data["temperature_2m"] = hourly_temperature_2m
+    hourly_data["relative_humidity_2m"] = hourly_relative_humidity_2m
+    hourly_data["dew_point_2m"] = hourly_dew_point_2m
+    hourly_data["apparent_temperature"] = hourly_apparent_temperature
+    hourly_data["rain"] = hourly_rain
+    hourly_data["snowfall"] = hourly_snowfall
+    hourly_data["snow_depth"] = hourly_snow_depth
+    hourly_data["surface_pressure"] = hourly_surface_pressure
+    hourly_data["cloud_cover"] = hourly_cloud_cover
+    hourly_data["soil_temperature_0_to_7cm"] = hourly_soil_temperature_0_to_7cm
+    hourly_data["soil_moisture_0_to_7cm"] = hourly_soil_moisture_0_to_7cm
+    hourly_data["wind_speed_10m"] = hourly_wind_speed_10m
+    hourly_data["wind_direction_10m"] = hourly_wind_direction_10m
+    hourly_data["wind_gusts_10m"] = hourly_wind_gusts_10m
+
+    hourly_dataframe = pd.DataFrame(data = hourly_data)
+
+    #add column for station code
+    hourly_dataframe['station'] = station_code
+
+    return hourly_dataframe
+
+def get_weather_data(stoppings_df, stations, from_location, to_location):
+    """
+    Creates a dataframe of hourly weather for each location along the route from the date of the first record in stoppings_df until the
+    last. This is saved as a csv in the data/raw_api_responses directory.
+
+    Args:
+    - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
+    - stations (dictionary): a dictionary of each station code along a route and its corresponding coordinates
+    - from_location (str): the origin station code
+    - to_location (str): the terminus station code
+
+    Returns:
+    - joined_weather_df (dataframe): a dataframe of hourly weather for each location along the route.
+    """
+    print(f"Gathering weather data for {from_location} to {to_location}")
+
+    #placeholder list for weather dataframes
+    weather_dfs = []
+
+    #loop through the stations
+    for station in stations.keys():
+
+        #get start and end dates for API call
+        station_df = stoppings_df[stoppings_df['station'] == station]
+        start_date = station_df['actual_time'].min().strftime('%Y-%m-%d')
+        end_date = station_df['actual_time'].max().strftime('%Y-%m-%d')
+
+        #get latitude and longitude for API call
+        latitude = stations[station]['latitude']
+        longitude = stations[station]['longitude']
+
+        #call the api
+        station_weather = openmeteo_api_call(start_date, end_date, station, latitude, longitude)
+
+        weather_dfs.append(station_weather)
+    
+    #join the weather dataframes
+    joined_weather_df = pd.concat(weather_dfs, ignore_index=True)
+
+    #save to csv and return
+    filepath = RAW_DATA / f"{from_location}_{to_location}_weather.csv"
+    joined_weather_df.to_csv(filepath, index=False)
+
+    return joined_weather_df
+
+def join_train_weather_data(stoppings_df, weather_df, from_location, to_location):
+    """
+    Merges a train dataframe and a weather dataframe based on the actual time (actual departure time unless terminus, in which case arrival time),
+    rounded to the nearest hour and on the station code. The resulting data is saved as interim data.
+
+    Args:
+    - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station.
+    - weather_df (dataframe): a dataframe of hourly weather for each location along the route.
+    - from_location (str): the origin station code
+    - to_location (str): the terminus station code
+
+    Returns:
+    - merged_df (dataframe): a dataframe where each row is a record of a train stopping at a station as well as the weather for the hour nearest this
+    time
+    """
+    #round passing time to the nearest hour
+    stoppings_df['nearest_hour'] = stoppings_df['actual_time'].dt.round('h')
+    stoppings_df['nearest_hour'] = stoppings_df['actual_time'].dt.tz_localize('Europe/London', 
+                                                                   nonexistent='NaT',
+                                                                   ambiguous='NaT').dt.tz_convert('UTC') #set ambiguous or non-existent time to NaT (generally due to time zone changes)
+    
+    #drop train records within an hour of time changes to save confusion
+    stoppings_df = stoppings_df.dropna(subset=['nearest_hour'])
+
+    #merge with weahter on date, nearest hour and station
+    merged_df = pd.merge(
+        stoppings_df,
+        weather_df,
+        left_on=['nearest_hour', 'station'],
+        right_on=['date', 'station'],
+        how='left'
+    )
+
+    #get filepath and save copy
+    filepath = INDIVIDUAL_ROUTES / f'{from_location}_{to_location}_final.csv'
+    merged_df.to_csv(filepath, index=False)
+
+    return merged_df
+
+

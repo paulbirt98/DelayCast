@@ -5,7 +5,7 @@ from pipeline_utils.config import FROM_DATE, TO_DATE, RAW_DATA
 import argparse
 from pipeline_utils.api_helpers import fetch_rids, fetch_train_times
 
-#Parse in args for route beginning and end from the command line
+#Parse in args for route beginning and end, toc, and testing boolean from the command line
 def parse_cl_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--from_location", type=str, required=True)

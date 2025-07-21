@@ -42,6 +42,10 @@ DATA = PROJECT_ROOT / 'data'
 RAW_DATA = DATA / 'raw_api_responses'
 INTERIM_DATA = DATA / 'semi_processed'
 PROCESSED_DATA = DATA / 'processed'
+INDIVIDUAL_ROUTES = PROCESSED_DATA / 'individual_routes'
+ALL_ROUTES_AMALG = PROCESSED_DATA / 'amalgamated_routes'
+METADATA = DATA / 'metadata'
+UK_STATIONS_FILE = METADATA / 'uk_stations.csv'
 
 #Pipeline file path
 PIPELINE = PROJECT_ROOT / 'pipeline'
