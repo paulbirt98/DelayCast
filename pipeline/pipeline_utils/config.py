@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import base64
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def build_headers_object():
     """
@@ -61,8 +61,9 @@ TO_TIME = 22
 #max workers for thread pool executor
 MAX_WORKERS = 3
 
-#Threshold for removing infrequent station codes (percentage)
-FREQ_THRESHOLD = 0.05
+#Thresholds for removing infrequent and not recent station codes (percentage)
+FREQ_VALUE = 0.05
+CUT_OFF_DATE = datetime(2025, 5, 31) - timedelta(days=365)
 
 #For use in delay classification
 RECORDING_ERROR_MIN = -720

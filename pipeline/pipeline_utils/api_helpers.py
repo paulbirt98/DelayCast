@@ -174,12 +174,16 @@ def call_service_details_api(rid):
             station = stop.get("location", "").lower()
 
             if i < (len(stops) - 1):  # Get departure times for all but final station
-                journey_record[f"{station}_scheduled_departure_time"] = stop.get("gbtt_ptd", "")
-                journey_record[f"{station}_actual_departure_time"] = stop.get("actual_td", "")
+                if stop.get("gbtt_ptd"):
+                    journey_record[f"{station}_scheduled_departure_time"] = stop.get("gbtt_ptd")
+                if stop.get("actual_td"):
+                    journey_record[f"{station}_actual_departure_time"] = stop.get("actual_td")
             
             if i == (len(stops) - 1): # Get arrival times for the final station
-                journey_record[f"{station}_scheduled_arrival_time"] = stop.get("gbtt_pta", "")
-                journey_record[f"{station}_actual_arrival_time"] = stop.get("actual_ta", "")
+                if stop.get("gbtt_pta"):
+                    journey_record[f"{station}_scheduled_arrival_time"] = stop.get("gbtt_pta")
+                if stop.get("actual_ta"):
+                    journey_record[f"{station}_actual_arrival_time"] = stop.get("actual_ta")
 
             journey_record[f"{station}_lc_reason"] = stop.get("late_canc_reason", "")
         

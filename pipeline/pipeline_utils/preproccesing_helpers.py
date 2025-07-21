@@ -1,6 +1,8 @@
 import pandas as pd
+from tqdm import tqdm
 from pipeline_utils.config import (
-    FREQ_THRESHOLD, 
+    FREQ_VALUE, 
+    CUT_OFF_DATE,
     RECORDING_ERROR_MIN, 
     RECORDING_ERROR_MAX, 
     NO_DELAY_UPPER_BOUNDARY, 
@@ -19,6 +21,8 @@ import requests_cache
 from retry_requests import retry
 import time
 
+tqdm.pandas()
+
 def convert_to_datetime(journeys_df):
     """
     Converts all time columns (columns for shceduled and actual arrival or departure time) to datetime
@@ -35,7 +39,7 @@ def convert_to_datetime(journeys_df):
     time_columns = [col for col in journeys_df.columns if '_time' in col]
 
     for col in time_columns:
-        journeys_df[col] = journeys_df.apply(
+        journeys_df[col] = journeys_df.progress_apply(
             lambda row: pd.to_datetime(f"{row['date']} {int(row[col]):04}", format="%Y-%m-%d %H%M") if pd.notnull(row[col]) else pd.NaT,
             axis=1
         )
@@ -44,10 +48,39 @@ def convert_to_datetime(journeys_df):
 
     return journeys_df
 
-def drop_low_freq_stations(journeys_df, from_location, to_location):
+def load_json_to_dict(from_location, to_location):
     """
-    Removes any column relating to stations which appear less frequently (as a percentage fo total rows in the passed dataframe)
-    than FREQ_THRESHOLD as set in config.py. The resulting dataframe is saved as a csv file in data/semi_processed.
+    Loads the relevant json file to the script containing stations on a route, given the from_location and to_location passed in.
+
+    Args:
+    - from_location (str): the origin station code
+    - to_location (str): the terminus station code
+
+    Returns:
+    - station_codes (dict): A dictionary of all saved station codes on a route and their respective coordinates
+    """
+    file_path = METADATA / f"{from_location}_{to_location}_stations.json"
+
+    try:
+        with open(file_path, "r") as file:
+            station_codes = json.load(file)
+        
+        return station_codes
+    
+    except FileNotFoundError:
+        print(f"Error loading json file. File not found at path: {file_path}")
+        return {}
+    except PermissionError:
+        print(f"Permission error in accessing file at {file_path}, please ensure it is not open elsewhere")
+        return {}
+    except Exception as e:
+        print(f"Unexcpeted error loading file at {file_path}: {e}")
+        return {}
+
+def to_long_format(journeys_df, from_location, to_location):
+    """
+    Converts a dataframe of train journeys to long format. I.e. each row will now relate to a a single train passing a single station,
+    rather than a row relating to an entire route.
 
     Args:
     - journeys_df (dataframe): a dataframe containing details of all train journeys on a given route
@@ -55,32 +88,107 @@ def drop_low_freq_stations(journeys_df, from_location, to_location):
     - to_location (str): the terminus station code
 
     Returns:
-    - journeys_df (dataframe): the same dataframe passed in as an argument but with all low frequency stations removed
-    - unique_station_codes (list[str]): a list of all unique station codes that exceed the threshold for inclusion
+    - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
     """
-    
-    #a set of unique station codes
-    unique_station_codes = set(
-        [col.split('_')[0] for col in journeys_df.columns if '_scheduled_departure_time' in col]
+    id_vars = ['rid', 'date', 'toc']
+
+    # identify all unique station codes
+    time_columns = [col for col in journeys_df.columns if '_scheduled_' in col or '_actual_' in col]
+    station_codes = sorted({col.split('_')[0] for col in time_columns})
+
+    #get value vars
+    scheduled_cols = [
+        f"{station}_scheduled_arrival_time" if station == to_location else f"{station}_scheduled_departure_time"
+        for station in station_codes
+        if (f"{station}_scheduled_arrival_time" if station == to_location else f"{station}_scheduled_departure_time") in journeys_df.columns
+    ]
+
+    actual_cols = [
+        f"{station}_actual_arrival_time" if station == to_location else f"{station}_actual_departure_time"
+        for station in station_codes
+        if (f"{station}_actual_arrival_time" if station == to_location else f"{station}_actual_departure_time") in journeys_df.columns
+    ]
+
+    reason_cols = [
+        f"{station}_lc_reason"
+        for station in station_codes
+        if f"{station}_lc_reason" in journeys_df.columns
+    ]
+
+    # melt each set of columns separately
+    scheduled_df = journeys_df.melt(
+        id_vars=id_vars,
+        value_vars=scheduled_cols,
+        var_name="station",
+        value_name="scheduled_time"
     )
 
-    #drop any stations that appear less than 5% of the time
-    for station in unique_station_codes.copy():
-        station_columns = [col for col in journeys_df.columns if station in col]
-        station_scheduled_column = f"{station}_scheduled_departure_time"
-        if journeys_df[station_scheduled_column].count() < (len(journeys_df) * FREQ_THRESHOLD):
-            print(f"Dropping {station} from the dataframe due to low frequency")
-            journeys_df.drop(columns=station_columns, inplace=True)
-            unique_station_codes.discard(station)
+    actual_df = journeys_df.melt(
+        id_vars=id_vars,
+        value_vars=actual_cols,
+        var_name="station",
+        value_name="actual_time"
+    )
+
+    reason_df = journeys_df.melt(
+        id_vars=id_vars,
+        value_vars=reason_cols,
+        var_name="station",
+        value_name="lc_reason"
+    )
+
+    # clean up station names
+    for df in [scheduled_df, actual_df, reason_df]:
+        df['station'] = df['station'].str.extract(r'^([A-Z]{3})')[0].str.upper()
+
+    # merge the three melted DataFrames
+    merged_df = scheduled_df.merge(actual_df, on=id_vars + ['station'], how='outer')
+    merged_df = merged_df.merge(reason_df, on=id_vars + ['station'], how='left')
+
+    # drop rows where all station-level data is missing
+    merged_df = merged_df.dropna(subset=['scheduled_time', 'actual_time'], how='all')
+
+    # Save and return
+    filepath = INTERIM_DATA / f'{from_location}_{to_location}_long_format.csv'
+    merged_df.to_csv(filepath, index=False)
+
+    return merged_df
+
+def save_recent_and_frequent(stoppings_df, from_location, to_location):
+    """
+    Removes any rows relating to stations which appear less frequently (as a percentage of total number of unique journey RIDs)
+    than FREQ_THRESHOLD as set in config.py, as well as any rows for stations with no stoppings after CUT_OFF_DATE as set in config.py. 
+    It will also drop any rogue arrival stations which are not the terminus. The resulting dataframe is saved as a csv file in data/semi_processed.
+
+    Args:
+    - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
+    - from_location (str): the origin station code
+    - to_location (str): the terminus station code
+
+    Returns:
+    - stoppings_df (dataframe): the same dataframe passed in as an argument but with all low frequency and non-recent stations removed
+    - saved_stations (list[str]): a list of all unique station codes that exceed the threshold for inclusion
+    """
+    #calculate minimum frequency to be saved
+    unique_journey_count = stoppings_df['rid'].nunique()
+    frequency_threshold = unique_journey_count * FREQ_VALUE
+    print(f"Minimum frequency to be saved {frequency_threshold}")
+
+    #get the frequency for each station
+    station_frequencies = stoppings_df['station'].value_counts()
+    print("Station Frequencies")
+    print(station_frequencies)
+
+    #keep stations above thresholds
+    frequent_stations = station_frequencies[station_frequencies >= frequency_threshold].index
+    recent_stations = stoppings_df[stoppings_df['actual_time'] >= CUT_OFF_DATE]['station'].unique()
+    saved_stations = sorted(set(frequent_stations) & set(recent_stations))
+    stoppings_df = stoppings_df[stoppings_df['station'].isin(saved_stations)]
     
-    #convert unique codes to a list and then save to a json file
-    unique_station_codes = list(unique_station_codes)
+    print("Retained stations")
+    print(saved_stations)
 
-    #get filepath and save
-    filepath = INTERIM_DATA / f'{from_location}_{to_location}_saved_stations.csv'
-    journeys_df.to_csv(filepath, index=False)
-
-    return journeys_df, unique_station_codes
+    return stoppings_df, saved_stations
 
 def create_station_coords_json(station_codes, coords_df, from_location, to_location):
     """
@@ -118,104 +226,6 @@ def create_station_coords_json(station_codes, coords_df, from_location, to_locat
     print('Coords dictionary created and saved to metadata as json')
 
     return station_coords_dict
-
-def load_json_to_dict(from_location, to_location):
-    """
-    Loads the relevant json file to the script containing stations on a route, given the from_location and to_location passed in.
-
-    Args:
-    - from_location (str): the origin station code
-    - to_location (str): the terminus station code
-
-    Returns:
-    - station_codes (dict): A dictionary of all saved station codes on a route and their respective coordinates
-    """
-    file_path = METADATA / f"{from_location}_{to_location}_stations.json"
-
-    try:
-        with open(file_path, "r") as file:
-            station_codes = json.load(file)
-        
-        return station_codes
-    
-    except FileNotFoundError:
-        print(f"Error loading json file. File not found at path: {file_path}")
-        return {}
-    except PermissionError:
-        print(f"Permission error in accessing file at {file_path}, please ensure it is not open elsewhere")
-        return {}
-    except Exception as e:
-        print(f"Unexcpeted error loading file at {file_path}: {e}")
-        return {}
-
-def to_long_format(journeys_df, station_codes, from_location, to_location):
-    """
-    Converts a dataframe of train journeys to long format. I.e. each row will now relate to a a single train passing a single station,
-    rather than a row relating to an entire route.
-
-    Args:
-    - journeys_df (dataframe): a dataframe containing details of all train journeys on a given route
-    - station_codes (list[str]): A list of strings containing the three letter CRS code identifying all stations
-    - from_location (str): the origin station code
-    - to_location (str): the terminus station code
-
-    Returns:
-    - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
-    """
-    #define id variables, to stay as columns
-    id_variables = ['rid', 'date', 'toc']
-    #placeholder list for dataframes
-    dataframes = []
-
-    print("Converting to long format")
-
-    for i, station in enumerate(station_codes):
-
-        print(f"Station: {station}")
-        
-        #assign station specific columns to general scheduled vs actual variable
-        if i < (len(station_codes) -  1):
-            scheduled = f"{station}_scheduled_departure_time"
-            actual = f"{station}_actual_departure_time"
-        else:
-            scheduled = f"{station}_scheduled_arrival_time"
-            actual = f"{station}_actual_arrival_time"
-
-        reason_code = f"{station}_lc_reason"
-
-        #check these columns exist and create a list
-        station_columns = [col for col in [scheduled, actual, reason_code] if col in journeys_df.columns]
-
-        if scheduled in station_columns:
-            print(f"{station} exists in dataframe")
-        else:
-            print(f"Station {station} wasnt found in the dataframe")
-
-        #create a dataframe for each station to be concatenated later
-        stations_df = journeys_df[id_variables + station_columns].copy()
-        #make station its own column
-        stations_df['station'] = station
-
-        #rename time columns for uniformity
-        if scheduled in stations_df.columns:
-            stations_df.rename(columns={scheduled: "scheduled_time"}, inplace=True)
-        if actual in stations_df.columns:
-            stations_df.rename(columns={actual: "actual_time"}, inplace=True)
-        
-        stations_df.rename(columns={reason_code: "lc_reason"}, inplace=True)
-
-        #append to the dataframe list
-        dataframes.append(stations_df)
-
-    #join all dataframes back together
-    stoppings_df = pd.concat(dataframes, ignore_index=True)
-    stoppings_df = stoppings_df[['rid', 'date', 'toc', 'station', 'scheduled_time', 'actual_time', 'lc_reason']]
-
-    #get filepath and save
-    filepath = INTERIM_DATA / f'{from_location}_{to_location}_long_format.csv'
-    stoppings_df.to_csv(filepath, index=False)
-
-    return stoppings_df
 
 def clean(stoppings_df):
     """

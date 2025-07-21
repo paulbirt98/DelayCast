@@ -3,9 +3,9 @@ import pandas as pd
 from pipeline_utils.config import RAW_DATA, INTERIM_DATA, METADATA, UK_STATIONS_FILE
 from pipeline_utils.preproccesing_helpers import ( 
     convert_to_datetime, 
-    drop_low_freq_stations, 
+    to_long_format,
+    save_recent_and_frequent, 
     create_station_coords_json, 
-    to_long_format, 
     clean, 
     derive_temporal_features,
     get_direction_feature,
@@ -47,17 +47,19 @@ except PermissionError:
 except Exception as e:
     print(f"Unexpected error reading file {raw_data_file}: {e}")
 
-
-#convert time columns to datetime and drop low frequency stations
+#convert time columns to datetime
 journeys_df = convert_to_datetime(journeys_df)
-print(f"Shape before dropping low frequency stations: {journeys_df.shape}")
-journeys_df, station_codes = drop_low_freq_stations(journeys_df, from_location, to_location) #station codes list saved
-print(f"Shape after dropping low frequency stations: {journeys_df.shape}")
 
 #convert to long format - one row/record per stopping
 print(f"Shape before converting to long format: {journeys_df.shape}")
-stoppings_df = to_long_format(journeys_df, station_codes)
+stoppings_df = to_long_format(journeys_df, from_location, to_location)
 print(f"Shape after converting to long format: {stoppings_df.shape}")
+
+#drop low frequency stations and stations with no recent recorsd
+print(f"Shape before dropping low frequency stations: {stoppings_df.shape}")
+stoppings_df, station_codes = save_recent_and_frequent(stoppings_df, from_location, to_location)
+print(f"Shape after dropping low frequency stations: {stoppings_df.shape}")
+print("Station codes being used:", station_codes)
 
 #clean
 print(f"Shape before cleaning dataframe: {stoppings_df.shape}")
@@ -65,6 +67,7 @@ stoppings_df = clean(stoppings_df)
 print(f"Shape after cleaning dataframe: {stoppings_df.shape}")
 
 print(f"Shape before deriving + calculating features: {stoppings_df.shape}")
+
 #derive temporal and direction features
 stoppings_df = derive_temporal_features(stoppings_df)
 stoppings_df = get_direction_feature(stoppings_df, from_location, to_location)
