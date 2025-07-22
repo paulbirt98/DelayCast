@@ -79,8 +79,10 @@ def load_json_to_dict(from_location, to_location):
 
 def to_long_format(journeys_df, from_location, to_location):
     """
-    Converts a dataframe of train journeys to long format. I.e. each row will now relate to a a single train passing a single station,
-    rather than a row relating to an entire route.
+    Converts a dataframe of train journeys to long format. I.e. each row now relates to a single train passing a single station, 
+    rather than a row representing an entire journey.
+
+    Rows are only included where at least one of the scheduled or actual time values is recorded for a given station.
 
     Args:
     - journeys_df (dataframe): a dataframe containing details of all train journeys on a given route
@@ -88,71 +90,74 @@ def to_long_format(journeys_df, from_location, to_location):
     - to_location (str): the terminus station code
 
     Returns:
-    - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
+    - stoppings_df (dataframe): a long format dataframe with one row per stopping record, containing the columns:
+        ['rid', 'date', 'toc', 'station', 'scheduled_time', 'actual_time', 'lc_reason']
     """
     id_vars = ['rid', 'date', 'toc']
+    long_format_rows = []
 
-    # identify all unique station codes
-    time_columns = [col for col in journeys_df.columns if '_scheduled_' in col or '_actual_' in col]
-    station_codes = sorted({col.split('_')[0] for col in time_columns})
+    # Get all unique station codes based on scheduled/actual time columns
+    station_codes = sorted({
+        col.split('_')[0]
+        for col in journeys_df.columns
+        if '_scheduled_' in col or '_actual_' in col
+    })
 
-    #get value vars
-    scheduled_cols = [
-        f"{station}_scheduled_arrival_time" if station == to_location else f"{station}_scheduled_departure_time"
-        for station in station_codes
-        if (f"{station}_scheduled_arrival_time" if station == to_location else f"{station}_scheduled_departure_time") in journeys_df.columns
-    ]
+    print("Converting to long format")
 
-    actual_cols = [
-        f"{station}_actual_arrival_time" if station == to_location else f"{station}_actual_departure_time"
-        for station in station_codes
-        if (f"{station}_actual_arrival_time" if station == to_location else f"{station}_actual_departure_time") in journeys_df.columns
-    ]
+    for station in station_codes:
+        # Determine correct arrival/departure field names
+        if station == to_location:
+            sched_col = f"{station}_scheduled_arrival_time"
+            actual_col = f"{station}_actual_arrival_time"
+        else:
+            sched_col = f"{station}_scheduled_departure_time"
+            actual_col = f"{station}_actual_departure_time"
 
-    reason_cols = [
-        f"{station}_lc_reason"
-        for station in station_codes
-        if f"{station}_lc_reason" in journeys_df.columns
-    ]
+        reason_col = f"{station}_lc_reason"
+        
+        # Check which columns exist in the input
+        columns_present = [col for col in [sched_col, actual_col, reason_col] if col in journeys_df.columns]
+        if not columns_present:
+            print(f"Skipping {station}: no columns found")
+            continue
 
-    # melt each set of columns separately
-    scheduled_df = journeys_df.melt(
-        id_vars=id_vars,
-        value_vars=scheduled_cols,
-        var_name="station",
-        value_name="scheduled_time"
-    )
+        # Subset and rename
+        station_df = journeys_df[id_vars + columns_present].copy()
+        station_df['station'] = station.upper()
 
-    actual_df = journeys_df.melt(
-        id_vars=id_vars,
-        value_vars=actual_cols,
-        var_name="station",
-        value_name="actual_time"
-    )
+        rename_map = {}
+        if sched_col in station_df.columns:
+            rename_map[sched_col] = 'scheduled_time'
+        if actual_col in station_df.columns:
+            rename_map[actual_col] = 'actual_time'
+        if reason_col in station_df.columns:
+            rename_map[reason_col] = 'lc_reason'
+        station_df.rename(columns=rename_map, inplace=True)
 
-    reason_df = journeys_df.melt(
-        id_vars=id_vars,
-        value_vars=reason_cols,
-        var_name="station",
-        value_name="lc_reason"
-    )
+        # Drop rows where all available time columns are missing
+        time_cols = [col for col in ['scheduled_time', 'actual_time'] if col in station_df.columns]
+        if time_cols:
+            station_df.dropna(subset=time_cols, how='all', inplace=True)
 
-    # clean up station names
-    for df in [scheduled_df, actual_df, reason_df]:
-        df['station'] = df['station'].str.extract(r'^([A-Z]{3})')[0].str.upper()
+        long_format_rows.append(station_df)
 
-    # merge the three melted DataFrames
-    merged_df = scheduled_df.merge(actual_df, on=id_vars + ['station'], how='outer')
-    merged_df = merged_df.merge(reason_df, on=id_vars + ['station'], how='left')
+    # Concatenate all station-level records
+    stoppings_df = pd.concat(long_format_rows, ignore_index=True)
 
-    # drop rows where all station-level data is missing
-    merged_df = merged_df.dropna(subset=['scheduled_time', 'actual_time'], how='all')
+    # Ensure consistent column order
+    expected_cols = ['rid', 'date', 'toc', 'station', 'scheduled_time', 'actual_time', 'lc_reason']
+    for col in expected_cols:
+        if col not in stoppings_df.columns:
+            stoppings_df[col] = pd.NA
+    stoppings_df = stoppings_df[expected_cols]
 
     # Save and return
     filepath = INTERIM_DATA / f'{from_location}_{to_location}_long_format.csv'
-    merged_df.to_csv(filepath, index=False)
+    stoppings_df.to_csv(filepath, index=False)
 
-    return merged_df
+    print(f"Saved long format to {filepath}")
+    return stoppings_df
 
 def save_recent_and_frequent(stoppings_df, from_location, to_location):
     """
@@ -281,7 +286,7 @@ def get_direction_feature(stoppings_df, from_location, to_location):
     Returns:
     - stoppings_df (dataframe): the same dataframe as was passed in but with an added 'direction' feature  
     """
-    stoppings_df['direction'] = f"{from_location}-{to_location}"
+    stoppings_df['direction'] = f"{from_location.upper()}-{to_location.upper()}"
 
     return stoppings_df
 
@@ -344,9 +349,11 @@ def openmeteo_api_call(start_date, end_date, station_code, latitude, longitude):
     - hourly_dataframe (dataframe): a dataframe of weather for the given location and date range (hourly)
     """
     #variable to handle rate limit exceedance
-    rate_limit_message = "Minutely API request limit exceeded"
-    wait_time = 60
-    retries = 5
+    minute_rate_limit_message = "Minutely API request limit exceeded"
+    hour_rate_limit_message = "Hourly API request limit exceeded"
+    minute_wait_time = 60
+    hour_wait_time = 3600
+    retries = 10
 
     # Setup the Open-Meteo API client with cache and retry on error
     cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
@@ -361,7 +368,22 @@ def openmeteo_api_call(start_date, end_date, station_code, latitude, longitude):
         "longitude": longitude,
         "start_date": start_date,
         "end_date": end_date,
-        "hourly": ["temperature_2m", "snowfall", "snow_depth", "rain", "precipitation", "apparent_temperature", "weather_code", "is_day", "cloud_cover", "relative_humidity_2m", "wind_speed_10m", "wind_gusts_10m"],
+        "hourly": [     
+            "temperature_2m",
+            "relative_humidity_2m",
+            "dew_point_2m",
+            "apparent_temperature",
+            "rain",
+            "snowfall",
+            "snow_depth",
+            "surface_pressure",
+            "cloud_cover",
+            "soil_temperature_0_to_7cm",
+            "soil_moisture_0_to_7cm",
+            "wind_speed_10m",
+            "wind_direction_10m",
+            "wind_gusts_10m"
+            ],
         "timezone": "Europe/London"
     }
 
@@ -371,11 +393,15 @@ def openmeteo_api_call(start_date, end_date, station_code, latitude, longitude):
             break
         except Exception as e:
             print(f"Request failed: {e}")
-            if rate_limit_message in str(e):
-                print(f"Rate limit exceeded, waiting {wait_time} before retrying")
-                time.sleep(wait_time)
+            if minute_rate_limit_message in str(e):
+                print(f"Minutely limit exceeded, waiting {minute_wait_time} before retrying")
+                time.sleep(minute_wait_time)
+            elif hour_rate_limit_message in str(e):
+                print(f"Hourly limit exceeded, waiting {hour_wait_time} before retrying")
+                time.sleep(hour_wait_time)
             else:
                 raise Exception("Issue calling weather API")
+    raise Exception("Max retries exceeded.")
 
 
     # Process first location. Add a for-loop for multiple locations or weather models
@@ -493,7 +519,7 @@ def join_train_weather_data(stoppings_df, weather_df, from_location, to_location
     """
     #round passing time to the nearest hour
     stoppings_df['nearest_hour'] = stoppings_df['actual_time'].dt.round('h')
-    stoppings_df['nearest_hour'] = stoppings_df['actual_time'].dt.tz_localize('Europe/London', 
+    stoppings_df['nearest_hour'] = stoppings_df['nearest_hour'].dt.tz_localize('Europe/London', 
                                                                    nonexistent='NaT',
                                                                    ambiguous='NaT').dt.tz_convert('UTC') #set ambiguous or non-existent time to NaT (generally due to time zone changes)
     

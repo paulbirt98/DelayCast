@@ -1,3 +1,7 @@
 __pycache__/
 .env
+*.sqlite
+.cache/
 /data/
+/data/metadata
+/data/raw_api_responses
