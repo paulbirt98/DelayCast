@@ -136,12 +136,14 @@ def fetch_rids(from_location, to_location, atoc, from_date, to_date, testing=Fal
 
     return rid_records_df
 
-def call_service_details_api(rid):
+def call_service_details_api(rid, avoid=None):
     """
     Fetch service details from the HSP API for a given RID.
 
     Args:
     - rid (str): The service RID.
+    - avoid (str): Optional. A three letter station code, if present in the list of stops returned by the API this journey will be skipped
+    and will not be saved.
 
     Returns:
     - dict: The fetched train journey details, including all scheduled and actual departure times, except for the final station for which
@@ -169,8 +171,11 @@ def call_service_details_api(rid):
             "toc": details.get("toc_code", ""),
         }
 
-        # Extract stop-wise data
+        # Extract stop-wise data (unless the 'avoid' station is present in stations list returned)
         for i, stop in enumerate(stops):
+            if avoid in stops:
+                continue
+
             station = stop.get("location", "").lower()
 
             if i < (len(stops) - 1):  # Get departure times for all but final station
@@ -198,12 +203,15 @@ def call_service_details_api(rid):
         print(f"Unexpected Error for {rid}: {e}")
         return None
     
-def fetch_train_times(rids_df, max_workers=MAX_WORKERS):
+def fetch_train_times(rids_df, avoid=None, max_workers=MAX_WORKERS):
     """
     A function to loop through each RID in an RID dataframe and call the HSP Service Details API
 
     Arguments:
     - rids_df (dataframe): A dataframe containing RIDs for each train journey from which service details are desired
+    - avoid (str): Optional. A three letter station code, if present in the list of stops returned by the API this journey will be skipped
+    and will not be saved.
+    - max_workers (int): the number of concurrent threads, set in config.py
 
     Returns:
     - journey_details_df (dataframe): A dataframe of all journey details for all given RIDs
@@ -214,7 +222,7 @@ def fetch_train_times(rids_df, max_workers=MAX_WORKERS):
 
     #create a thread pool for up to 10 concurrent calls
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_rid = {executor.submit(call_service_details_api, rid): rid for rid in rids}
+        future_rid = {executor.submit(call_service_details_api, rid, avoid): rid for rid in rids}
 
         for future in as_completed(future_rid):
             rid = future_rid[future]

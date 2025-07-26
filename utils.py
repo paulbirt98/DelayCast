@@ -170,10 +170,11 @@ def calculate_delay(scheduled_time, actual_time):
 
 def calculate_delay_classification(delay_minutes):
     """
+    Classsifies delay based on 
     """
     if pd.isna(delay_minutes):
         return "Issue Classifying"
-    elif delay_minutes < 5:
+    elif delay_minutes:
         return "Not Delayed"
     elif 5 <= delay_minutes < 15:
         return "Mild Delay"

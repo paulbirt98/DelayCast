@@ -1,6 +1,10 @@
 import argparse
 import pandas as pd
-from pipeline_utils.config import RAW_DATA, INTERIM_DATA, METADATA, UK_STATIONS_FILE
+from pipeline_utils.config import (
+    RAW_DATA, 
+    INTERIM_DATA, 
+    UK_STATIONS_FILE
+)
 from pipeline_utils.preproccesing_helpers import ( 
     convert_to_datetime, 
     to_long_format,
@@ -12,7 +16,7 @@ from pipeline_utils.preproccesing_helpers import (
     calculate_delay,
     calculate_delay_classification,
     get_weather_data,
-    join_train_weather_data
+    join_train_weather_data,
 )
 
 def parse_cl_arguments():

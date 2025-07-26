@@ -11,6 +11,7 @@ from pipeline_utils.config import (
     METADATA, 
     RAW_DATA,
     INTERIM_DATA,
+    INDIVIDUAL_DIRECTIONS,
     INDIVIDUAL_ROUTES,
     ALL_ROUTES_AMALG
 )
@@ -176,7 +177,10 @@ def save_recent_and_frequent(stoppings_df, from_location, to_location):
     """
     #calculate minimum frequency to be saved
     unique_journey_count = stoppings_df['rid'].nunique()
-    frequency_threshold = unique_journey_count * FREQ_VALUE
+    if ('inv' in from_location) or ('inv' in to_location):
+        frequency_threshold = 4000
+    else:
+        frequency_threshold = unique_journey_count * FREQ_VALUE
     print(f"Minimum frequency to be saved {frequency_threshold}")
 
     #get the frequency for each station
@@ -351,9 +355,9 @@ def openmeteo_api_call(start_date, end_date, station_code, latitude, longitude):
     #variable to handle rate limit exceedance
     minute_rate_limit_message = "Minutely API request limit exceeded"
     hour_rate_limit_message = "Hourly API request limit exceeded"
-    minute_wait_time = 60
-    hour_wait_time = 3600
-    retries = 10
+    minute_wait_time = 90
+    hour_wait_time = 3630
+    retries = 100
 
     # Setup the Open-Meteo API client with cache and retry on error
     cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
@@ -382,7 +386,8 @@ def openmeteo_api_call(start_date, end_date, station_code, latitude, longitude):
             "soil_moisture_0_to_7cm",
             "wind_speed_10m",
             "wind_direction_10m",
-            "wind_gusts_10m"
+            "wind_gusts_10m",
+            "is_day"
             ],
         "timezone": "Europe/London"
     }
@@ -394,14 +399,13 @@ def openmeteo_api_call(start_date, end_date, station_code, latitude, longitude):
         except Exception as e:
             print(f"Request failed: {e}")
             if minute_rate_limit_message in str(e):
-                print(f"Minutely limit exceeded, waiting {minute_wait_time} before retrying")
+                print(f"Minutely limit exceeded, waiting {minute_wait_time} seconds before retrying")
                 time.sleep(minute_wait_time)
             elif hour_rate_limit_message in str(e):
-                print(f"Hourly limit exceeded, waiting {hour_wait_time} before retrying")
+                print(f"Hourly limit exceeded, waiting 1 hour before retrying")
                 time.sleep(hour_wait_time)
             else:
                 raise Exception("Issue calling weather API")
-    raise Exception("Max retries exceeded.")
 
 
     # Process first location. Add a for-loop for multiple locations or weather models
@@ -427,6 +431,7 @@ def openmeteo_api_call(start_date, end_date, station_code, latitude, longitude):
     hourly_wind_speed_10m = hourly.Variables(11).ValuesAsNumpy()
     hourly_wind_direction_10m = hourly.Variables(12).ValuesAsNumpy()
     hourly_wind_gusts_10m = hourly.Variables(13).ValuesAsNumpy()
+    hourly_is_day = hourly.Variables(16).ValuesAsNumpy()
 
     hourly_data = {"date": pd.date_range(
         start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
@@ -536,9 +541,25 @@ def join_train_weather_data(stoppings_df, weather_df, from_location, to_location
     )
 
     #get filepath and save copy
-    filepath = INDIVIDUAL_ROUTES / f'{from_location}_{to_location}_final.csv'
+    filepath = INDIVIDUAL_DIRECTIONS / f'{from_location}_{to_location}_final.csv'
     merged_df.to_csv(filepath, index=False)
 
     return merged_df
 
+def concat_stoppings_dfs(stoppings_df_a, stoppings_df_b):
+    """
+    Joins two train dataframes(must be in the same format) together
+
+    Args:
+    - stoppings_df_a (dataframe): a dataframe where each row is a record of a train stopping at a station.
+    - stoppings_df_a (dataframe): a dataframe in the same format as stoppings_df_a.
+
+    Returns:
+    - merged_df (dataframe): stoppings_df_a and stoppings_df_b merged into a single dataframe
+    """
+    df_list = [stoppings_df_a, stoppings_df_b]
+
+    merged_df = pd.concat(df_list, ignore_index=True)
+
+    return merged_df
 

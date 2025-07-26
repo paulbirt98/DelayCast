@@ -15,6 +15,7 @@ def parse_cl_arguments():
     parser.add_argument("--to_location", type=str, required=True)
     parser.add_argument("--toc", type=str, required=True)
     parser.add_argument("--testing", action="store_true")
+    parser.add_argument("--avoid", type=str, default=None)
     return parser.parse_args()
 
 args = parse_cl_arguments()
@@ -22,10 +23,11 @@ from_location = args.from_location.upper()
 to_location = args.to_location.upper()
 toc = args.toc.upper()
 testing = args.testing
+avoid = args.avoid.lower()
 
 #call api helper functions and assign
 rid_df = fetch_rids(from_location, to_location, toc, FROM_DATE, TO_DATE, testing=testing)
-train_data_df = fetch_train_times(rid_df)
+train_data_df = fetch_train_times(rid_df, avoid)
 
 #build filepath to save raw data to
 save_file_path = RAW_DATA / f'{from_location.lower()}_{to_location.lower()}_raw.csv'
