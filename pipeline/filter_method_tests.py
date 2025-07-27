@@ -5,6 +5,7 @@ from pipeline_utils.config import (
     FILTER_RESULTS
 )
 from pipeline_utils.config import FILTER_RESULTS
+from pipeline_utils.feature_selectors import run_anova_f
 import argparse
 
 def argparse_cl_arguments():
@@ -18,11 +19,11 @@ def argparse_cl_arguments():
 if __name__ == '__main__':
 
     route = argparse_cl_arguments().route.lower()
-
+    
     #if no route given, run tests on the unified dataset
     if route:
-        route_file = pd.read_csv(ALL_ROUTES_AMALG)
+        dataset = pd.read_csv(INDIVIDUAL_ROUTES / f'{route}_route.csv')
     else:
-        route_file = pd.read_csv(INDIVIDUAL_ROUTES / f'{route}.csv')
+        dataset = pd.read_csv(ALL_ROUTES_AMALG)
     
-    
+    run_anova_f(dataset)

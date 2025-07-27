@@ -1,6 +1,6 @@
 import pandas as pd
 from pipeline_utils.config import NUMERICAL_FEATURES
-from sklearn import SelectKBest, f_classif
+from sklearn.feature_selection import SelectKBest, f_classif
 
 def run_anova_f(stoppings_df):
     """
@@ -13,11 +13,11 @@ def run_anova_f(stoppings_df):
     -
     """
     #define features and target
-    features = stoppings_df[[NUMERICAL_FEATURES]]
-    target = stoppings_df[['delay_classification']]
+    features = stoppings_df[NUMERICAL_FEATURES]
+    target = stoppings_df['delay_classification']
 
     #apply anova f tests
-    selector = SelectKBest(score=f_classif, k='all')
+    selector = SelectKBest(score_func=f_classif, k='all')
     selector.fit(features, target)
 
     #put results to a dataframe
