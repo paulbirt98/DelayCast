@@ -23,7 +23,10 @@ from_location = args.from_location.upper()
 to_location = args.to_location.upper()
 toc = args.toc.upper()
 testing = args.testing
-avoid = args.avoid.lower()
+if args.avoid:
+    avoid = args.avoid.lower()
+else:
+    avoid = None
 
 #call api helper functions and assign
 rid_df = fetch_rids(from_location, to_location, toc, FROM_DATE, TO_DATE, testing=testing)

@@ -5,8 +5,9 @@ from pipeline_utils.config import (
     FILTER_RESULTS
 )
 from pipeline_utils.config import FILTER_RESULTS
-from pipeline_utils.feature_selectors import run_anova_f
+from pipeline_utils.feature_selectors import run_anova_f, run_mutual_info
 import argparse
+import numpy as np
 
 def argparse_cl_arguments():
     """
@@ -25,5 +26,10 @@ if __name__ == '__main__':
         dataset = pd.read_csv(INDIVIDUAL_ROUTES / f'{route}_route.csv')
     else:
         dataset = pd.read_csv(ALL_ROUTES_AMALG)
+
+    #shuffled_target = np.random.permutation(dataset['delay_classification'])
     
-    run_anova_f(dataset)
+    #run_anova_f(dataset.assign(delay_classification=shuffled_target), p_threshold=0.05)
+
+    run_mutual_info(dataset)
+

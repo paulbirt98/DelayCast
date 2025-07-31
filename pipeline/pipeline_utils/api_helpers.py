@@ -134,6 +134,9 @@ def fetch_rids(from_location, to_location, atoc, from_date, to_date, testing=Fal
     #convert to df
     rid_records_df = pd.DataFrame(rid_records)
 
+    #remove any duplicates
+    rid_records_df = rid_records_df.drop_duplicates(subset=["rid", "date"])
+
     return rid_records_df
 
 def call_service_details_api(rid, avoid=None):
@@ -173,8 +176,8 @@ def call_service_details_api(rid, avoid=None):
 
         # Extract stop-wise data (unless the 'avoid' station is present in stations list returned)
         for i, stop in enumerate(stops):
-            if avoid in stops:
-                continue
+            if avoid and any(stop.get("location") == avoid for stop in stops):
+                return None
 
             station = stop.get("location", "").lower()
 
@@ -183,7 +186,7 @@ def call_service_details_api(rid, avoid=None):
                     journey_record[f"{station}_scheduled_departure_time"] = stop.get("gbtt_ptd")
                 if stop.get("actual_td"):
                     journey_record[f"{station}_actual_departure_time"] = stop.get("actual_td")
-            
+                
             if i == (len(stops) - 1): # Get arrival times for the final station
                 if stop.get("gbtt_pta"):
                     journey_record[f"{station}_scheduled_arrival_time"] = stop.get("gbtt_pta")

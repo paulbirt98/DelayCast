@@ -12,11 +12,12 @@ from pipeline_utils.preproccesing_helpers import (
     create_station_coords_json, 
     clean, 
     derive_temporal_features,
-    get_direction_feature,
+    get_direction_features,
     calculate_delay,
     calculate_delay_classification,
     get_weather_data,
     join_train_weather_data,
+    get_first_and_terminus,
 )
 
 def parse_cl_arguments():
@@ -60,6 +61,11 @@ if __name__ == "__main__":
     stoppings_df = to_long_format(journeys_df, from_location, to_location)
     print(f"Shape after converting to long format: {stoppings_df.shape}")
 
+    #add first and last stations
+    print("Adding is_first_station and is_terminus")
+    stoppings_df = get_first_and_terminus(stoppings_df)
+    print("first and last stations flags added")
+
     #drop low frequency stations and stations with no recent recorsd
     print(f"Shape before dropping low frequency stations: {stoppings_df.shape}")
     stoppings_df, station_codes = save_recent_and_frequent(stoppings_df, from_location, to_location)
@@ -75,7 +81,7 @@ if __name__ == "__main__":
 
     #derive temporal and direction features
     stoppings_df = derive_temporal_features(stoppings_df)
-    stoppings_df = get_direction_feature(stoppings_df, from_location, to_location)
+    stoppings_df = get_direction_features(stoppings_df, from_location, to_location)
 
     #calculate delay minutes
     stoppings_df['delay_minutes'] = stoppings_df.apply(
@@ -93,7 +99,7 @@ if __name__ == "__main__":
     print(f"Shape after deriving + calculating features: {stoppings_df.shape}")
 
     #get filepath and save a copy with all derived features
-    with_features_filepath = INTERIM_DATA / f'{from_location}_{to_location}_w_derived_features.csv'
+    with_features_filepath = INTERIM_DATA / f'{from_location}_{to_location}_w_derived_features_test.csv'
     stoppings_df.to_csv(with_features_filepath, index=False)
 
     #pull the saved station coords from the metadata and create a dictionary
@@ -103,7 +109,13 @@ if __name__ == "__main__":
     #get weather data and join
     print(f"Shape before merging with weather: {stoppings_df.shape}")
 
-    weather_df = get_weather_data(stoppings_df, station_coords, from_location, to_location)
+    #check if weather csv already exists
+    weather_filepath = RAW_DATA / f'{from_location}_{to_location}_weather.csv'
+
+    if weather_filepath.is_file():
+        weather_df = pd.read_csv(RAW_DATA / f'{from_location}_{to_location}_weather.csv', parse_dates=['date'])
+    else:
+        weather_df = get_weather_data(stoppings_df, station_coords, from_location, to_location)
 
     merged_df = join_train_weather_data(stoppings_df, weather_df, from_location, to_location)
 

@@ -93,3 +93,12 @@ NUMERICAL_FEATURES = [
             "wind_direction_10m",
             "wind_gusts_10m",
     ]
+CATEGORICAL_FEATURES = [
+    'toc',
+    'station',
+    'hour',
+    'day',
+    'month',
+    'direction',
+    'is_day'
+]

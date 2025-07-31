@@ -107,18 +107,19 @@ def to_long_format(journeys_df, from_location, to_location):
     print("Converting to long format")
 
     for station in station_codes:
+        
         # Determine correct arrival/departure field names
         if station == to_location:
-            sched_col = f"{station}_scheduled_arrival_time"
+            scheduled_col = f"{station}_scheduled_arrival_time"
             actual_col = f"{station}_actual_arrival_time"
         else:
-            sched_col = f"{station}_scheduled_departure_time"
+            scheduled_col = f"{station}_scheduled_departure_time"
             actual_col = f"{station}_actual_departure_time"
 
         reason_col = f"{station}_lc_reason"
         
         # Check which columns exist in the input
-        columns_present = [col for col in [sched_col, actual_col, reason_col] if col in journeys_df.columns]
+        columns_present = [col for col in [scheduled_col, actual_col, reason_col] if col in journeys_df.columns]
         if not columns_present:
             print(f"Skipping {station}: no columns found")
             continue
@@ -128,8 +129,8 @@ def to_long_format(journeys_df, from_location, to_location):
         station_df['station'] = station.upper()
 
         rename_map = {}
-        if sched_col in station_df.columns:
-            rename_map[sched_col] = 'scheduled_time'
+        if scheduled_col in station_df.columns:
+            rename_map[scheduled_col] = 'scheduled_time'
         if actual_col in station_df.columns:
             rename_map[actual_col] = 'actual_time'
         if reason_col in station_df.columns:
@@ -146,6 +147,8 @@ def to_long_format(journeys_df, from_location, to_location):
     # Concatenate all station-level records
     stoppings_df = pd.concat(long_format_rows, ignore_index=True)
 
+    stoppings_df = stoppings_df[~stoppings_df['rid'].isin(stoppings_df[stoppings_df['station'] == 'ABD']['rid'])]
+
     # Ensure consistent column order
     expected_cols = ['rid', 'date', 'toc', 'station', 'scheduled_time', 'actual_time', 'lc_reason']
     for col in expected_cols:
@@ -153,18 +156,45 @@ def to_long_format(journeys_df, from_location, to_location):
             stoppings_df[col] = pd.NA
     stoppings_df = stoppings_df[expected_cols]
 
+    print("Checking for duplicates...")
+    dupes = stoppings_df.duplicated(subset=['rid', 'station', 'scheduled_time', 'actual_time'])
+    print(f"Duplicate rows: {dupes.sum()} out of {len(stoppings_df)}")
+
+    print('dropping duplicates')
+    stoppings_df = stoppings_df.drop_duplicates(subset=['rid', 'station', 'scheduled_time', 'actual_time'], keep='first')
+
     # Save and return
     filepath = INTERIM_DATA / f'{from_location}_{to_location}_long_format.csv'
     stoppings_df.to_csv(filepath, index=False)
 
     print(f"Saved long format to {filepath}")
+
+    return stoppings_df
+
+def get_first_and_terminus(stoppings_df):
+    """
+    
+    """
+    # Sort by rid and scheduled time (or actual time if preferred)
+    stoppings_df = stoppings_df.sort_values(by=["rid", "scheduled_time"])
+
+    # For each rid, assign 1 to the first and last row for is_first_station and is_terminus
+    stoppings_df['is_first_station'] = 0
+    stoppings_df['is_terminus'] = 0
+
+    first_indices = stoppings_df.groupby('rid').head(1).index
+    last_indices = stoppings_df.groupby('rid').tail(1).index
+
+    stoppings_df.loc[first_indices, 'is_first_station'] = 1
+    stoppings_df.loc[last_indices, 'is_terminus'] = 1
+
     return stoppings_df
 
 def save_recent_and_frequent(stoppings_df, from_location, to_location):
     """
     Removes any rows relating to stations which appear less frequently (as a percentage of total number of unique journey RIDs)
-    than FREQ_THRESHOLD as set in config.py, as well as any rows for stations with no stoppings after CUT_OFF_DATE as set in config.py. 
-    It will also drop any rogue arrival stations which are not the terminus. The resulting dataframe is saved as a csv file in data/semi_processed.
+    than FREQ_THRESHOLD as set in config.py, as well as any rows for stations with no stoppings after CUT_OFF_DATE as set in config.py.
+    The resulting dataframe is saved as a csv file in data/semi_processed.
 
     Args:
     - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
@@ -177,10 +207,8 @@ def save_recent_and_frequent(stoppings_df, from_location, to_location):
     """
     #calculate minimum frequency to be saved
     unique_journey_count = stoppings_df['rid'].nunique()
-    if ('inv' in from_location) or ('inv' in to_location):
-        frequency_threshold = 4000
-    else:
-        frequency_threshold = unique_journey_count * FREQ_VALUE
+
+    frequency_threshold = unique_journey_count * FREQ_VALUE
     print(f"Minimum frequency to be saved {frequency_threshold}")
 
     #get the frequency for each station
@@ -277,9 +305,9 @@ def derive_temporal_features(stoppings_df):
 
     return stoppings_df
 
-def get_direction_feature(stoppings_df, from_location, to_location):
+def get_direction_features(stoppings_df, from_location, to_location):
     """
-    Add direction as a feature, example format for a EUS to LIV service: 'EUS-LIV'
+    Adds feature based directions, i.e. direction (example format for a EUS to LIV service: 'EUS-LIV').
 
     Args:
     - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
@@ -431,7 +459,7 @@ def openmeteo_api_call(start_date, end_date, station_code, latitude, longitude):
     hourly_wind_speed_10m = hourly.Variables(11).ValuesAsNumpy()
     hourly_wind_direction_10m = hourly.Variables(12).ValuesAsNumpy()
     hourly_wind_gusts_10m = hourly.Variables(13).ValuesAsNumpy()
-    hourly_is_day = hourly.Variables(16).ValuesAsNumpy()
+    hourly_is_day = hourly.Variables(14).ValuesAsNumpy()
 
     hourly_data = {"date": pd.date_range(
         start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
@@ -454,6 +482,7 @@ def openmeteo_api_call(start_date, end_date, station_code, latitude, longitude):
     hourly_data["wind_speed_10m"] = hourly_wind_speed_10m
     hourly_data["wind_direction_10m"] = hourly_wind_direction_10m
     hourly_data["wind_gusts_10m"] = hourly_wind_gusts_10m
+    hourly_data["is_day"] = hourly_is_day
 
     hourly_dataframe = pd.DataFrame(data = hourly_data)
 
@@ -496,7 +525,9 @@ def get_weather_data(stoppings_df, stations, from_location, to_location):
         #call the api
         station_weather = openmeteo_api_call(start_date, end_date, station, latitude, longitude)
 
+        print(f'{station} weather added')
         weather_dfs.append(station_weather)
+        time.sleep(2)
     
     #join the weather dataframes
     joined_weather_df = pd.concat(weather_dfs, ignore_index=True)
