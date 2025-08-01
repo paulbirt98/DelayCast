@@ -13,7 +13,8 @@ from pipeline_utils.config import (
     INTERIM_DATA,
     INDIVIDUAL_DIRECTIONS,
     INDIVIDUAL_ROUTES,
-    ALL_ROUTES_AMALG
+    ALL_ROUTES_AMALG,
+    NUMERICAL_FEATURES
 )
 import json
 from pathlib import Path
@@ -148,6 +149,7 @@ def to_long_format(journeys_df, from_location, to_location):
     stoppings_df = pd.concat(long_format_rows, ignore_index=True)
 
     stoppings_df = stoppings_df[~stoppings_df['rid'].isin(stoppings_df[stoppings_df['station'] == 'ABD']['rid'])]
+
 
     # Ensure consistent column order
     expected_cols = ['rid', 'date', 'toc', 'station', 'scheduled_time', 'actual_time', 'lc_reason']
@@ -570,6 +572,10 @@ def join_train_weather_data(stoppings_df, weather_df, from_location, to_location
         right_on=['date', 'station'],
         how='left'
     )
+
+    #drop na for all weather features
+    merged_df.dropna(subset=NUMERICAL_FEATURES, inplace=True)
+    merged_df.dropna(subset=['is_day'], inplace=True)
 
     #get filepath and save copy
     filepath = INDIVIDUAL_DIRECTIONS / f'{from_location}_{to_location}_final.csv'

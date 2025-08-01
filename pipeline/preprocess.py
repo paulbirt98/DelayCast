@@ -109,13 +109,15 @@ if __name__ == "__main__":
     #get weather data and join
     print(f"Shape before merging with weather: {stoppings_df.shape}")
 
+    """
     #check if weather csv already exists
     weather_filepath = RAW_DATA / f'{from_location}_{to_location}_weather.csv'
 
     if weather_filepath.is_file():
         weather_df = pd.read_csv(RAW_DATA / f'{from_location}_{to_location}_weather.csv', parse_dates=['date'])
-    else:
-        weather_df = get_weather_data(stoppings_df, station_coords, from_location, to_location)
+    else:"""
+    
+    weather_df = get_weather_data(stoppings_df, station_coords, from_location, to_location)
 
     merged_df = join_train_weather_data(stoppings_df, weather_df, from_location, to_location)
 

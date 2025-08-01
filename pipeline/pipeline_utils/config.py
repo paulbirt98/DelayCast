@@ -52,7 +52,8 @@ UK_STATIONS_FILE = METADATA / 'uk_stations.csv'
 PIPELINE = PROJECT_ROOT / 'pipeline'
 
 #Feature selection filepaths
-FILTER_RESULTS = PIPELINE / 'results' / 'filter_results'
+FS_RESULTS = PIPELINE / 'results' / 'feature_selection'
+ALL_ROUTE_FS = PIPELINE / 'results' / 'feature_selection' / 'all'
 
 #Date Ranges for HSP API call
 FROM_DATE = datetime(2015, 6, 1)
@@ -100,5 +101,7 @@ CATEGORICAL_FEATURES = [
     'day',
     'month',
     'direction',
-    'is_day'
+    'is_day',
+    'is_first_station',
+    'is_terminus'
 ]

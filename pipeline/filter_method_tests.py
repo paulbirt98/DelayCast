@@ -2,10 +2,11 @@ import pandas as pd
 from pipeline_utils.config import (
     INDIVIDUAL_ROUTES, 
     ALL_ROUTES_AMALG,
-    FILTER_RESULTS
+    FS_RESULTS,
+    ALL_ROUTE_FS
 )
-from pipeline_utils.config import FILTER_RESULTS
-from pipeline_utils.feature_selectors import run_anova_f, run_mutual_info
+from pipeline_utils.config import FS_RESULTS
+from pipeline_utils.feature_selectors import multicoll_heatmap, run_anova_f, run_chi_squared, run_mutual_info
 import argparse
 import numpy as np
 
@@ -24,12 +25,34 @@ if __name__ == '__main__':
     #if no route given, run tests on the unified dataset
     if route:
         dataset = pd.read_csv(INDIVIDUAL_ROUTES / f'{route}_route.csv')
+        folder = FS_RESULTS / route 
+        folder.mkdir(parents=True, exist_ok=True) # make folder if it doesnt exist
+        heat_map_filepath = folder / f'{route}_route_heatmap.png'
+        anova_filepath = folder / f'{route}_anova.csv'
+        chi_filepath = folder / f'{route}_chi.csv'
+        mi_filepath = folder / f'{route}_mi.csv'
     else:
         dataset = pd.read_csv(ALL_ROUTES_AMALG)
+        folder = ALL_ROUTE_FS
 
-    #shuffled_target = np.random.permutation(dataset['delay_classification'])
+    #get and save multicollinearity heat map
+    heat_map = multicoll_heatmap(dataset)
+    #save to folder
+    heat_map.savefig(heat_map_filepath, dpi=300, bbox_inches='tight')
     
-    #run_anova_f(dataset.assign(delay_classification=shuffled_target), p_threshold=0.05)
+    anova = run_anova_f(dataset, 'classification')
+    anova.to_csv(anova_filepath, index=False)
+    print('Anova')
+    print(anova)
+    print('\n')
 
-    run_mutual_info(dataset)
+    chi = run_chi_squared(dataset)
+    chi.to_csv(chi_filepath, index=False)
+    print('Chi Squared')
+    print(chi)
+    print('\n')
 
+    mi = run_mutual_info(dataset)
+    mi.to_csv(mi_filepath, index=False)
+    print('Mutual Info')
+    print(mi)
