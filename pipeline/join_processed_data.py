@@ -25,7 +25,8 @@ if __name__ == '__main__':
     
     if outwards_filepath.is_file() and return_filepath.is_file():
 
-        print('Merging both directions')
+        route = f'{startpoint}_{endpoint}'
+        print(f'Merging both directions on {route}')
 
         try:
             outwards_df = pd.read_csv(outwards_filepath)
@@ -39,7 +40,7 @@ if __name__ == '__main__':
 
         #merge and save
         route_df = concat_stoppings_dfs(outwards_df, return_df)
-        route_filepath = INDIVIDUAL_ROUTES / f'{startpoint}_{endpoint}_route.csv'
+        route_filepath = INDIVIDUAL_ROUTES / route / f'{startpoint}_{endpoint}_route.csv'
         route_df.to_csv(route_filepath, index=False)
 
         print('Success. Saved to individual routes')

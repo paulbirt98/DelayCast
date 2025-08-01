@@ -1,5 +1,15 @@
 import pandas as pd
-from pipeline_utils.config import INDIVIDUAL_ROUTES, ALL_ROUTES_AMALG
+from pipeline_utils.config import (
+    INDIVIDUAL_ROUTES,
+    ALL_ROUTES_AMALG,
+    ROUTE_VALIDATION,
+    ROUTE_TESTING,
+    ALL_TRAINING,
+    ALL_VALIDATION,
+    ALL_TESTING,
+    TRAINING_RATIO,
+    VALIDATION_RATIO,
+)
 import argparse
 
 def argparse_cl_arguments():
@@ -16,6 +26,39 @@ if __name__ == '__main__':
     
     #if no route given, split unified dataset
     if route:
+        #assign and create file and directory paths accordingly
+        route_directory = INDIVIDUAL_ROUTES / route
+        route_directory.mkdir(parents=True, exist_ok=True)
+        dataset = pd.read_csv(route_directory / f'{route}_route.csv', parse_dates=['scheduled_time'])
+
+        training_file = route_directory / f'{route}_training_data.csv'
+        validation_file = route_directory / f'{route}_validation_data.csv'
+        testing_file = route_directory / f'{route}_testing_data.csv'
 
     else:
+        dataset = pd.read_csv(ALL_ROUTES_AMALG)
     
+    #sort the rows by datetime on scheduled
+    dataset = dataset.sort_values(by=['scheduled_time']).reset_index(drop=True) 
+
+    #get total number of rows
+    total = len(dataset)
+
+    training_cutoff = int(total * TRAINING_RATIO)
+    validation_cutoff = training_cutoff + int(total * VALIDATION_RATIO)
+
+    #get dataframes based on these cut offs
+    training_df = dataset.iloc[:training_cutoff]
+    validation_df = dataset.iloc[training_cutoff:validation_cutoff]
+    testing_df = dataset.iloc[validation_cutoff:]
+
+    print(f"Training: {training_df['scheduled_time'].min()} to {training_df['scheduled_time'].max()}")
+    print(f"Validation: {validation_df['scheduled_time'].min()} to {validation_df['scheduled_time'].max()}")
+    print(f"Testing: {testing_df['scheduled_time'].min()} to {testing_df['scheduled_time'].max()}")
+
+
+    #save to appropriate directories
+    training_df.to_csv(training_file, index=False)
+    validation_df.to_csv(validation_file, index=False)
+    testing_df.to_csv(testing_file, index=False)
+

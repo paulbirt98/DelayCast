@@ -48,6 +48,17 @@ ALL_ROUTES_AMALG = PROCESSED_DATA / 'amalgamated_routes'
 METADATA = DATA / 'metadata'
 UK_STATIONS_FILE = METADATA / 'uk_stations.csv'
 
+#split dataset directories
+ROUTE_VALIDATION = INDIVIDUAL_ROUTES / 'validation'
+ROUTE_TESTING = INDIVIDUAL_ROUTES / 'test_data'
+ALL_TRAINING = ALL_ROUTES_AMALG / 'training'
+ALL_VALIDATION = ALL_ROUTES_AMALG / 'validation'
+ALL_TESTING = ALL_ROUTES_AMALG / 'test_data'
+
+#train test split ratios
+TRAINING_RATIO = 0.6
+VALIDATION_RATIO = 0.2
+
 #Pipeline file path
 PIPELINE = PROJECT_ROOT / 'pipeline'
 
