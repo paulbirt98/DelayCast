@@ -22,15 +22,16 @@ def multicoll_heatmap(stoppings_df):
 
     #plot the heatmap using matplotlib
     plot.figure(figsize=(12, 8))
-    sb.heatmap(matrix, annot=True, fmt=".2f", cmap='coolwarm', square=True, linewidths=0.5)
+    heatmap = sb.heatmap(matrix, annot=True, fmt=".2f", cmap='coolwarm', square=True, linewidths=0.5)
     plot.title("Correlation Heatmap of Multicollinearity")
+    plot.xticks(rotation=45, ha='right')  
+    plot.tight_layout()                   
 
-    #display
-    plot.show()
+    fig = plot.gcf()
 
     return plot.gcf()
 
-def run_anova_f(stoppings_df, target):
+def run_anova_f(stoppings_df, numerical_features, target):
     """
     Runs Anova F tests on all numerical features for the given database.
 
@@ -41,7 +42,7 @@ def run_anova_f(stoppings_df, target):
     - 
     """
     #define features and target
-    features = stoppings_df[NUMERICAL_FEATURES]
+    features = stoppings_df[numerical_features]
 
     #define target based on input
     if target == 'classification':
@@ -64,12 +65,12 @@ def run_anova_f(stoppings_df, target):
 
     return anova_f_results
 
-def run_chi_squared(stoppings_df):
+def run_chi_squared(stoppings_df, categorical_features):
     """
     
     """
     #encode categorical features
-    x = stoppings_df[CATEGORICAL_FEATURES].copy()
+    x = stoppings_df[categorical_features].copy()
     y = stoppings_df['delay_classification']
 
     encoder = OrdinalEncoder()
@@ -87,23 +88,23 @@ def run_chi_squared(stoppings_df):
 
     return chi2_results
 
-def run_mutual_info(stoppings_df):
+def run_mutual_info(stoppings_df, numerical_features, categorical_features):
     """
     
     """
     #define numerical features
-    numerical_features = stoppings_df[NUMERICAL_FEATURES]
+    numerical_df = stoppings_df[numerical_features]
     #encode categorical ones
-    categorical_features = stoppings_df[CATEGORICAL_FEATURES].copy()
+    categorical_df = stoppings_df[categorical_features].copy()
 
     encoder = OrdinalEncoder()
-    categorical_features = pd.DataFrame(
-    encoder.fit_transform(stoppings_df[CATEGORICAL_FEATURES]),
-    columns=CATEGORICAL_FEATURES
-)
+    categorical_features_encoded = pd.DataFrame(
+    encoder.fit_transform(categorical_df),
+    columns=categorical_features
+    )
 
                                           
-    features = pd.concat([numerical_features, categorical_features], axis=1)
+    features = pd.concat([numerical_df, categorical_features_encoded], axis=1)
 
     #define target
     target = stoppings_df['delay_classification']
