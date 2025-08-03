@@ -44,16 +44,16 @@ INTERIM_DATA = DATA / 'semi_processed'
 PROCESSED_DATA = DATA / 'processed'
 INDIVIDUAL_DIRECTIONS = PROCESSED_DATA / 'individual' / 'directions'
 INDIVIDUAL_ROUTES = PROCESSED_DATA / 'individual' / 'routes'
-ALL_ROUTES_AMALG = PROCESSED_DATA / 'amalgamated_routes'
+UNIFIED_ROUTES = PROCESSED_DATA / 'amalgamated_routes'
 METADATA = DATA / 'metadata'
 UK_STATIONS_FILE = METADATA / 'uk_stations.csv'
 
 #split dataset directories
 ROUTE_VALIDATION = INDIVIDUAL_ROUTES / 'validation'
 ROUTE_TESTING = INDIVIDUAL_ROUTES / 'test_data'
-ALL_TRAINING = ALL_ROUTES_AMALG / 'training'
-ALL_VALIDATION = ALL_ROUTES_AMALG / 'validation'
-ALL_TESTING = ALL_ROUTES_AMALG / 'test_data'
+ALL_TRAINING = UNIFIED_ROUTES / 'training'
+ALL_VALIDATION = UNIFIED_ROUTES / 'validation'
+ALL_TESTING = UNIFIED_ROUTES / 'test_data'
 
 #train test split ratios
 TRAINING_RATIO = 0.6
