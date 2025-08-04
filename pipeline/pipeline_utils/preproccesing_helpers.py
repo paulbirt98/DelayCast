@@ -13,7 +13,7 @@ from pipeline_utils.config import (
     INTERIM_DATA,
     INDIVIDUAL_DIRECTIONS,
     INDIVIDUAL_ROUTES,
-    ALL_ROUTES_AMALG,
+    UNIFIED_ROUTES_DIR,
     NUMERICAL_FEATURES
 )
 import json

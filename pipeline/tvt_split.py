@@ -1,7 +1,8 @@
 import pandas as pd
 from pipeline_utils.config import (
     INDIVIDUAL_ROUTES,
-    ALL_ROUTES_AMALG,
+    UNIFIED_ROUTES_DIR,
+    UNIFIED_ROUTES_FILE,
     ROUTE_VALIDATION,
     ROUTE_TESTING,
     ALL_TRAINING,
@@ -22,10 +23,13 @@ def argparse_cl_arguments():
 
 if __name__ == '__main__':
 
-    route = argparse_cl_arguments().route.lower()
+    args = argparse_cl_arguments()
     
     #if no route given, split unified dataset
-    if route:
+    if args.route:
+
+        route = args.route.lower()
+
         #assign and create file and directory paths accordingly
         route_directory = INDIVIDUAL_ROUTES / route
         route_directory.mkdir(parents=True, exist_ok=True)
@@ -36,7 +40,11 @@ if __name__ == '__main__':
         testing_file = route_directory / f'{route}_testing_data.csv'
 
     else:
-        dataset = pd.read_csv(ALL_ROUTES_AMALG)
+        dataset = pd.read_csv(UNIFIED_ROUTES_FILE, parse_dates=['scheduled_time'])
+        training_file = UNIFIED_ROUTES_DIR / 'unified_training_data.csv'
+        validation_file = UNIFIED_ROUTES_DIR / 'unified_validation_data.csv'
+        testing_file = UNIFIED_ROUTES_DIR / 'unified_testing_data.csv'
+
     
     #sort the rows by datetime on scheduled
     dataset = dataset.sort_values(by=['scheduled_time']).reset_index(drop=True) 

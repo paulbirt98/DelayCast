@@ -1,5 +1,5 @@
 import pandas as pd
-from pipeline_utils.config import INDIVIDUAL_ROUTES, UNIFIED_ROUTES
+from pipeline_utils.config import INDIVIDUAL_ROUTES, UNIFIED_ROUTES_DIR
 
 if __name__ == '__main__':
 
@@ -21,7 +21,7 @@ print('Concatenating files into unified dataframe')
 unified_data_df = pd.concat(all_routes, ignore_index=True)
 print('Dataframes successfully concatenated')
 
-save_filepath = UNIFIED_ROUTES / 'unified_routes.csv'
+save_filepath = UNIFIED_ROUTES_DIR / 'unified_routes.csv'
 
 unified_data_df.to_csv(save_filepath, index=False)
 print(f'Unified data saved to {save_filepath}')

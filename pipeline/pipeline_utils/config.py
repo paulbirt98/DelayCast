@@ -44,16 +44,17 @@ INTERIM_DATA = DATA / 'semi_processed'
 PROCESSED_DATA = DATA / 'processed'
 INDIVIDUAL_DIRECTIONS = PROCESSED_DATA / 'individual' / 'directions'
 INDIVIDUAL_ROUTES = PROCESSED_DATA / 'individual' / 'routes'
-UNIFIED_ROUTES = PROCESSED_DATA / 'amalgamated_routes'
+UNIFIED_ROUTES_DIR = PROCESSED_DATA / 'unified_routes'
+UNIFIED_ROUTES_FILE = UNIFIED_ROUTES_DIR / 'unified_routes.csv'
 METADATA = DATA / 'metadata'
 UK_STATIONS_FILE = METADATA / 'uk_stations.csv'
 
 #split dataset directories
 ROUTE_VALIDATION = INDIVIDUAL_ROUTES / 'validation'
 ROUTE_TESTING = INDIVIDUAL_ROUTES / 'test_data'
-ALL_TRAINING = UNIFIED_ROUTES / 'training'
-ALL_VALIDATION = UNIFIED_ROUTES / 'validation'
-ALL_TESTING = UNIFIED_ROUTES / 'test_data'
+ALL_TRAINING = UNIFIED_ROUTES_DIR / 'training'
+ALL_VALIDATION = UNIFIED_ROUTES_DIR / 'validation'
+ALL_TESTING = UNIFIED_ROUTES_DIR / 'test_data'
 
 #train test split ratios
 TRAINING_RATIO = 0.6
@@ -63,8 +64,8 @@ VALIDATION_RATIO = 0.2
 PIPELINE = PROJECT_ROOT / 'pipeline'
 
 #Feature selection filepaths
-FS_RESULTS = PIPELINE / 'results' / 'feature_selection'
-ALL_ROUTE_FS = PIPELINE / 'results' / 'feature_selection' / 'all'
+FS_RESULTS = PIPELINE / 'results'
+ALL_ROUTE_FS = PIPELINE / 'results' / 'all'
 
 #Date Ranges for HSP API call
 FROM_DATE = datetime(2015, 6, 1)
