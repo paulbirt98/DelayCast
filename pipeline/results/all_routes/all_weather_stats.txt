@@ -1,0 +1,79 @@
+Total number of records: 699050 
+
+delay_classification  count
+            No Delay 543581
+          Mild Delay 114145
+      Moderate Delay  28625
+        Severe Delay  12699
+
+temperature_2m stats 
+699050.000000
+    10.968949
+     6.117550
+   -13.435000
+     6.742500
+    10.822499
+    15.180500
+    35.299503
+
+rain stats 
+699050.000000
+     0.116358
+     0.361789
+     0.000000
+     0.000000
+     0.000000
+     0.000000
+    12.400000
+
+wind_gusts_10m stats 
+699050.000000
+    35.338239
+    17.576086
+     1.080000
+    22.319998
+    32.399998
+    45.000000
+   133.200000
+
+snow_depth stats 
+699050.000000
+     0.003616
+     0.022744
+     0.000000
+     0.000000
+     0.000000
+     0.000000
+     0.650000
+
+Temperature bin counts:
+temp_bin
+Very Cold       544
+Cold          23847
+Cool         287511
+Mild         341581
+Warm          32407
+Hot           11673
+Very Hot       1487
+
+Snow bin counts:
+snow_bin
+No Snow     642252
+Light        37848
+Moderate     13586
+Heavy         5364
+
+Rain bin counts:
+rain_bin
+None        527665
+Light        88354
+Moderate     81613
+Heavy         1418
+
+Wind gust bin counts:
+wind_bin
+Calm      139848
+Breezy    325877
+Windy     151745
+Gusty      71210
+Severe     10370

@@ -65,7 +65,7 @@ PIPELINE = PROJECT_ROOT / 'pipeline'
 
 #Feature selection filepaths
 FS_RESULTS = PIPELINE / 'results'
-ALL_ROUTE_FS = PIPELINE / 'results' / 'all'
+ALL_ROUTE_FS = PIPELINE / 'results' / 'all_routes'
 
 #Date Ranges for HSP API call
 FROM_DATE = datetime(2015, 6, 1)
@@ -117,3 +117,6 @@ CATEGORICAL_FEATURES = [
     'is_first_station',
     'is_terminus'
 ]
+
+SAMPLE_SIZE = 250000
+MAX_RARE_WEATHER = 60000

@@ -1,7 +1,7 @@
 import pandas as pd
 from pipeline_utils.config import (
     INDIVIDUAL_ROUTES, 
-    ALL_ROUTES_AMALG,
+    UNIFIED_ROUTES_DIR,
     FS_RESULTS,
     ALL_ROUTE_FS
 )
@@ -20,17 +20,21 @@ def argparse_cl_arguments():
 
 if __name__ == '__main__':
 
-    route = argparse_cl_arguments().route.lower()
+    args = argparse_cl_arguments()
+    route = args.route
     
     #if no route given, run tests on the unified dataset
     if route:
-        dataset = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_route.csv')
+        route = route.lower()
+        dataset = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv')
         folder = FS_RESULTS / route 
         folder.mkdir(parents=True, exist_ok=True) # make folder if it doesnt exist
-        heat_map_filepath = folder / f'{route}_route_heatmap.png'
+        heat_map_filepath = folder / f'{route}_heatmap.png'
     else:
-        dataset = pd.read_csv(ALL_ROUTES_AMALG)
+        route = 'all_routes'
+        dataset = pd.read_csv(UNIFIED_ROUTES_DIR / 'unified_training_data.csv')
         folder = ALL_ROUTE_FS
+        heat_map_filepath = FS_RESULTS / route / f'{route}_heatmap.png'
 
     #get and save multicollinearity heat map
     heat_map = multicoll_heatmap(dataset)

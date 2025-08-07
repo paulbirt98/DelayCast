@@ -1,7 +1,7 @@
 import pandas as pd
 from pipeline_utils.config import (
     INDIVIDUAL_ROUTES, 
-    ALL_ROUTES_AMALG,
+    UNIFIED_ROUTES_DIR,
     FS_RESULTS,
     ALL_ROUTE_FS,
     NUMERICAL_FEATURES,
@@ -24,19 +24,7 @@ def argparse_cl_arguments():
 if __name__ == '__main__':
 
     args = argparse_cl_arguments()
-    route = args.route.lower()
-    
-    #if no route given, run tests on the unified dataset
-    if route:
-        dataset = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_route.csv')
-        folder = FS_RESULTS / route 
-        folder.mkdir(parents=True, exist_ok=True) # make folder if it doesnt exist
-        anova_filepath = folder / f'{route}_anova.csv'
-        chi_filepath = folder / f'{route}_chi.csv'
-        mi_filepath = folder / f'{route}_mi.csv'
-    else:
-        dataset = pd.read_csv(ALL_ROUTES_AMALG)
-        folder = ALL_ROUTE_FS
+    route = args.route
 
     if args.filtered_features:
         filtered_out_features = [f.strip() for f in args.filtered_features.split(',')]
@@ -46,6 +34,25 @@ if __name__ == '__main__':
     ##ADD ERROR HANDLING FOR ITEMS NOT IN THE LISTS
     kept_numerical_features = [f for f in NUMERICAL_FEATURES if f not in filtered_out_features]
     kept_categorical_features = [f for f in CATEGORICAL_FEATURES if f not in filtered_out_features]
+    
+    #if no route given, run tests on the unified dataset
+    if route:
+        route = route.lower()
+        dataset = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv')
+        folder = FS_RESULTS / route 
+        folder.mkdir(parents=True, exist_ok=True) # make folder if it doesnt exist
+        anova_filepath = folder / f'{route}_anova.csv'
+        chi_filepath = folder / f'{route}_chi.csv'
+        mi_filepath = folder / f'{route}_mi.csv'
+    else:
+        route = 'all_routes'
+        kept_categorical_features = kept_categorical_features + ['route']
+        dataset = pd.read_csv(UNIFIED_ROUTES_DIR / 'unified_training_data.csv')
+        folder = ALL_ROUTE_FS
+        anova_filepath = folder / f'{route}_anova.csv'
+        chi_filepath = folder / f'{route}_chi.csv'
+        mi_filepath = folder / f'{route}_mi.csv'
+
 
     anova = run_anova_f(dataset, kept_numerical_features, 'classification')
     anova.to_csv(anova_filepath, index=False)

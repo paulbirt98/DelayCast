@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn.feature_selection import RFE
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
-from pipeline_utils.config import NUMERICAL_FEATURES, CATEGORICAL_FEATURES, INDIVIDUAL_ROUTES
+from pipeline_utils.config import NUMERICAL_FEATURES, CATEGORICAL_FEATURES, INDIVIDUAL_ROUTES, UNIFIED_ROUTES_DIR
 
 import argparse
 
@@ -18,18 +18,6 @@ def argparse_cl_arguments():
 if __name__ == '__main__':
 
     args = argparse_cl_arguments()
-    
-    #if no route given, split unified dataset
-    if args.route:
-        route = args.route.lower()
-
-        route_filepath = INDIVIDUAL_ROUTES / route / f'{route}_route.csv'
-
-        dataset = pd.read_csv(route_filepath)
-
-    else:
-
-        route = 1
 
     if args.filtered_features:
         filtered_out_features = [f.strip() for f in args.filtered_features.split(',')]
@@ -39,6 +27,19 @@ if __name__ == '__main__':
     ##ADD ERROR HANDLING FOR ITEMS NOT IN THE LISTS
     kept_numerical_features = [f for f in NUMERICAL_FEATURES if f not in filtered_out_features]
     kept_categorical_features = [f for f in CATEGORICAL_FEATURES if f not in filtered_out_features]
+    
+    #if no route given, split unified dataset
+    if args.route:
+        route = args.route.lower()
+
+        route_filepath = INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv'
+
+        dataset = pd.read_csv(route_filepath)
+
+    else:
+        kept_categorical_features = kept_categorical_features + ['route']
+        filepath = UNIFIED_ROUTES_DIR / 'unified_training_data.csv'
+        dataset = pd.read_csv(filepath)
 
     #prepare features
     numerical_features = dataset[kept_numerical_features]

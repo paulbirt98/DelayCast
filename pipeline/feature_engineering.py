@@ -1,10 +1,20 @@
 import pandas as pd
-from pipeline_utils.config import UNIFIED_ROUTES_FILE, UNIFIED_ROUTES_DIR
+from pipeline_utils.config import UNIFIED_ROUTES_FILE, UNIFIED_ROUTES_DIR, INDIVIDUAL_ROUTES
 
-data = pd.read_csv(UNIFIED_ROUTES_DIR / 'unified_training_data.csv')
+route = 'glq_inv'
 
-data['route'] = data['direction'].apply(lambda x: '-'.join(sorted(x.split('-'))))
+train = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv')
+val = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_validation_data.csv')
+test = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_testing_data.csv')
 
-route_counts = data.groupby('route').size().reset_index(name='count')
+delay_counts_train = train['delay_classification'].value_counts().reset_index()
+delay_counts_train.columns = ['delay_classification', 'count']
+print(delay_counts_train)
 
-print(route_counts)
+delay_counts_val = val['delay_classification'].value_counts().reset_index()
+delay_counts_val.columns = ['delay_classification', 'count']
+print(delay_counts_val)
+
+delay_counts_test = test['delay_classification'].value_counts().reset_index()
+delay_counts_test.columns = ['delay_classification', 'count']
+print(delay_counts_test)
