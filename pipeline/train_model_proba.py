@@ -30,9 +30,16 @@ if __name__ == '__main__':
         test = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_testing_data.csv')
 
     else:
-        train = pd.read_csv(UNIFIED_ROUTES_DIR / 'unified_training_data.csv')
-        val = pd.read_csv(UNIFIED_ROUTES_DIR / 'unified_validation_data.csv')
-        test = pd.read_csv(UNIFIED_ROUTES_DIR / 'unified_testing_data.csv')
+        route = 'unified_routes'
+        train = pd.read_csv(UNIFIED_ROUTES_DIR / f'{route}_training_data.csv')
+        val = pd.read_csv(UNIFIED_ROUTES_DIR / f'{route}_validation_data.csv')
+        test = pd.read_csv(UNIFIED_ROUTES_DIR / f'{route}_testing_data.csv')
+
+        #remove btnbdm
+        train = train[train['route'] != 'btn_bdm']
+        val = val[val['route'] != 'btn_bdm']
+        test = test[test['route'] != 'btn_bdm']
+
 
     # drop all non-feature columns
     drop_cols = ['rid', 'date_x', 'scheduled_time', 'actual_time', 'lc_reason', 
@@ -71,7 +78,7 @@ if __name__ == '__main__':
     """
 
     # Train hte base model
-    base_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+    base_clf = RandomForestClassifier(n_estimators=100, random_state=42, min_samples_leaf=50)
     base_clf.fit(X_train, y_train)
     #base_clf.fit(X_train_resampled, y_train_resampled) # if using SMOTE
 
@@ -82,17 +89,19 @@ if __name__ == '__main__':
     # evaluate on the test data
     probs = calibrator.predict_proba(X_test)
     class_labels = calibrator.classes_
-    le = LabelEncoder()
-    y_test_encoded = le.fit_transform(y_test)
-    y_test_bin = label_binarize(y_test_encoded, classes=range(len(class_labels)))
+    
+    y_test_bin = label_binarize(y_test, classes=class_labels)
 
     # log loss results
-    logloss = log_loss(y_test_bin, probs)
+    logloss = log_loss(y_test, probs, labels=class_labels)
     print(f"\nLog Loss: {logloss:.4f}")
 
     # brier results
     print("\nBrier Scores per class:")
     for i, cls in enumerate(class_labels):
+        if y_test_bin[:, i].sum() == 0:
+            print(f"{cls}: skipped (no positives in test set)")
+            continue
         brier = brier_score_loss(y_test_bin[:, i], probs[:, i])
         print(f"{cls}: {brier:.4f}")
 
@@ -100,7 +109,11 @@ if __name__ == '__main__':
     print("\nCalibration Curves:")
     plt.figure(figsize=(12, 8))
     for i, cls in enumerate(class_labels):
-        true_prob, pred_prob = calibration_curve(y_test_bin[:, i], probs[:, i], n_bins=15, strategy='uniform')
+        pos = int(y_test_bin[:, i].sum())
+        neg = y_test_bin.shape[0] - pos
+        if pos == 0 or neg == 0:
+            continue
+        true_prob, pred_prob = calibration_curve(y_test_bin[:, i], probs[:, i], n_bins=10, strategy='uniform')
         plt.plot(pred_prob, true_prob, marker='o', label=f'{cls}')
     plt.plot([0, 1], [0, 1], 'k--', label='Perfectly Calibrated')
     plt.title("Calibration Curves")

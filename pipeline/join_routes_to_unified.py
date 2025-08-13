@@ -1,5 +1,5 @@
 import pandas as pd
-from pipeline_utils.config import INDIVIDUAL_ROUTES, UNIFIED_ROUTES_DIR, SAMPLE_SIZE, MAX_RARE_WEATHER
+from pipeline_utils.config import INDIVIDUAL_ROUTES, UNIFIED_ROUTES_DIR, SAMPLE_SIZE, MAX_PROTECTED_SAMPLE
 
 if __name__ == '__main__':
 
@@ -15,37 +15,50 @@ if __name__ == '__main__':
 
                     print(f'\nNumber of rows in {route}: {len(route_df)}')
 
+                    #identofy minority classes to preserve
+                    moderate_rows = route_df[route_df['delay_classification'] == 'Moderate Delay']
+                    severe_rows = route_df[route_df['delay_classification'] == 'Severe Delay']
+
+                    print(f"Keeping {len(moderate_rows)} Moderate, {len(severe_rows)} Severe")
+
+                    minority_rows = pd.concat([moderate_rows, severe_rows], ignore_index=False)
+                    minority_rows = minority_rows.sample(n=min(len(minority_rows), MAX_PROTECTED_SAMPLE), random_state=42)
+
+                    #remove minority classes from main df
+                    records_to_protect = minority_rows.index
+                    unprotected_records = route_df.drop(minority_rows.index)
+
                     #identify rare but important weather variables
-                    rare_weather = route_df[
-                        (route_df['snow_depth'] > 0) |
-                        (route_df['temperature_2m'] < 0) |
-                        (route_df['temperature_2m'] > 25) |
-                        (route_df['wind_gusts_10m'] > 60)
+                    rare_weather = unprotected_records[
+                        (unprotected_records['snow_depth'] > 0) |
+                        (unprotected_records['temperature_2m'] < 0) |
+                        (unprotected_records['temperature_2m'] > 25) |
+                        (unprotected_records['wind_gusts_10m'] > 60) |
+                        (unprotected_records['surface_pressure'] < 980)
                     ]
 
-                    print(f'Initial rare weather rows found: {len(rare_weather)}')
+                    print(f'Additional rare weather rows found: {len(rare_weather)}')
 
                     #remove rare weather to sample equal number from each route
-                    common_weather = route_df.drop(rare_weather.index)
-
-                    rare_weather = rare_weather.sample(n=min(len(rare_weather), MAX_RARE_WEATHER), random_state=42)
-
+                    rare_weather = rare_weather.sample(n=min(len(rare_weather), MAX_PROTECTED_SAMPLE), random_state=42)
+                    rare_weather_records = rare_weather.index
+                    unprotected_records = unprotected_records.drop(rare_weather_records)
 
                     #sample equal numebr of rows from each route
-                    if len(common_weather) >= SAMPLE_SIZE:
-                        sample_data = common_weather.sample(n=SAMPLE_SIZE, random_state=42)
+                    if len(unprotected_records) >= SAMPLE_SIZE:
+                        sample_data = unprotected_records.sample(n=SAMPLE_SIZE, random_state=42)
                     else:
-                        sample_data = common_weather
-                        print(f'Less than {SAMPLE_SIZE} rows for {route}, number of rows sampled {len(common_weather)}')
+                        sample_data = unprotected_records
+                        print(f'Less than {SAMPLE_SIZE} rows for {route}, number of rows sampled {len(unprotected_records)}')
 
                     #combine with rare weather
-                    final_sample = pd.concat([sample_data, rare_weather], ignore_index=True)
+                    final_sample = pd.concat([sample_data, rare_weather, minority_rows], ignore_index=True)
 
                     #add a route feature
-                    # 👉 Add route identifier as a feature
                     final_sample['route'] = route
 
                     print(f'{len(rare_weather)} rare event rows added back for {route}')
+                    print(f'{len(minority_rows)} moderate and severe delay rows added back for {route}')
                     print(f'Final sample size for {route}: {len(final_sample)} rows')
 
                     all_routes.append(final_sample)
