@@ -118,5 +118,12 @@ CATEGORICAL_FEATURES = [
     'is_terminus'
 ]
 
+BINNED_FEATURES = [
+    'temp_bin',
+    'snow_depth_bin',
+    'rain_bin',
+    'gust_bin'
+]
+
 SAMPLE_SIZE = 250000
 MAX_RARE_WEATHER = 60000

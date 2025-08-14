@@ -69,7 +69,12 @@ if __name__ == '__main__':
     """
     #smote for minority classes
     print("\nSMOTE OVERSAMPLING")
-    smote = SMOTE(random_state=42)
+    smote_targets = {
+        'Mild Delay': 80000,
+        'Moderate Delay': 50000,
+        'Severe Delay': 25000
+    }
+    smote = SMOTE(random_state=42, sampling_strategy=smote_targets, k_neighbors=5)
     X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
     
 
@@ -78,8 +83,8 @@ if __name__ == '__main__':
     """
 
     # Train hte base model
-    base_clf = RandomForestClassifier(n_estimators=100, random_state=42, min_samples_leaf=50)
-    base_clf.fit(X_train, y_train)
+    base_clf = RandomForestClassifier(n_estimators=100, random_state=42, min_samples_leaf=50, n_jobs=-1, class_weight='balanced')
+    base_clf.fit(X_train, y_train) #if not using smote
     #base_clf.fit(X_train_resampled, y_train_resampled) # if using SMOTE
 
     # calibrate using calibrated classifier using val set
