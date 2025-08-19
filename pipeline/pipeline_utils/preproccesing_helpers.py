@@ -12,12 +12,9 @@ from pipeline_utils.config import (
     RAW_DATA,
     INTERIM_DATA,
     INDIVIDUAL_DIRECTIONS,
-    INDIVIDUAL_ROUTES,
-    UNIFIED_ROUTES_DIR,
     NUMERICAL_FEATURES
 )
 import json
-from pathlib import Path
 import openmeteo_requests
 import requests_cache
 from retry_requests import retry
@@ -254,10 +251,11 @@ def create_station_coords_json(station_codes, coords_df, from_location, to_locat
     station_coords_dict = {}
 
     for _, row in station_coords_df.iterrows():
+        name = row['station_name']
         code =  row['crs_code']
         latitude = row['lat']
         longitude = row['long']
-        station_coords_dict[code] = {'latitude': latitude, 'longitude': longitude}
+        station_coords_dict[name] = {'station_code': code, 'latitude': latitude, 'longitude': longitude}
 
     with open(file_path, "w") as json_file:
         json.dump(station_coords_dict, json_file)
