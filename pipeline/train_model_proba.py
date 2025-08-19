@@ -25,9 +25,9 @@ if __name__ == '__main__':
     #load either route or unified dataset
     if route:
         route = route.lower()
-        train = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv')
-        val = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_validation_data.csv')
-        test = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_testing_data.csv')
+        train = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_training_data.csv')
+        val = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_validation_data.csv')
+        test = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_testing_data.csv')
 
     else:
         route = 'unified_routes'
@@ -42,12 +42,9 @@ if __name__ == '__main__':
 
 
     # drop all non-feature columns
-    drop_cols = ['rid', 'date_x', 'scheduled_time', 'actual_time', 'lc_reason', 
-                'is_first_station', 'is_terminus', 'delay_classification', 
-                'delay_minutes', 'nearest_hour', 'date_y', 'cloud_cover', 
-                'snowfall', 'apparent_temperature', 'soil_temperature_0_to_7cm', 
-                'wind_speed_10m', 'dew_point_2m', 'is_day',
-                'soil_moisture_0_to_7cm', 'wind_direction_10m', 'toc']
+    drop_cols = ['rid', 'date_x', 'scheduled_time', 'actual_time', 'lc_reason', 'delay_classification', 
+                'delay_minutes', 'nearest_hour', 'date_y', 'cloud_cover', 'apparent_temperature', 'soil_temperature_0_to_7cm', 
+                'wind_speed_10m', 'dew_point_2m', 'is_day', 'wind_direction_10m', 'toc']
 
     X_train = train.drop(columns=drop_cols, errors='ignore').fillna(0)
     y_train = train['delay_classification']
@@ -83,7 +80,7 @@ if __name__ == '__main__':
     """
 
     # Train hte base model
-    base_clf = RandomForestClassifier(n_estimators=100, random_state=42, min_samples_leaf=50, n_jobs=-1, class_weight='balanced')
+    base_clf = RandomForestClassifier(n_estimators=100, random_state=42, min_samples_leaf=50, n_jobs=-1)
     base_clf.fit(X_train, y_train) #if not using smote
     #base_clf.fit(X_train_resampled, y_train_resampled) # if using SMOTE
 
@@ -118,7 +115,7 @@ if __name__ == '__main__':
         neg = y_test_bin.shape[0] - pos
         if pos == 0 or neg == 0:
             continue
-        true_prob, pred_prob = calibration_curve(y_test_bin[:, i], probs[:, i], n_bins=10, strategy='uniform')
+        true_prob, pred_prob = calibration_curve(y_test_bin[:, i], probs[:, i], n_bins=10, strategy='quantile')
         plt.plot(pred_prob, true_prob, marker='o', label=f'{cls}')
     plt.plot([0, 1], [0, 1], 'k--', label='Perfectly Calibrated')
     plt.title("Calibration Curves")
@@ -128,3 +125,5 @@ if __name__ == '__main__':
     plt.grid()
     plt.tight_layout()
     plt.show()
+
+    

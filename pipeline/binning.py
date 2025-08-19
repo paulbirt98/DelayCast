@@ -1,7 +1,7 @@
 import pandas as pd
 from pipeline_utils.config import UNIFIED_ROUTES_FILE, UNIFIED_ROUTES_DIR, INDIVIDUAL_ROUTES
 from pipeline_utils.preproccesing_helpers import calculate_delay_classification
-from pipeline_utils.eng_helpers import tvt_split, temperature_binning_glq, snow_depth_binning_glq, rain_binning_glq, gust_binning_glq
+from pipeline_utils.eng_helpers import tvt_split
 from pipeline_utils.visualisation_helpers import plot_stacked_delay_by_binned_feature
 
 #assign route
@@ -42,7 +42,7 @@ print('\n\n')
 
 # Rain bins
 rain_bins = [-0.01, 0, 0.5, 1, float('inf')]
-rain_labels = ['None', 'Light', 'Heavy', 'Very Heavy']
+rain_labels = ['No Rain', 'Light', 'Heavy', 'Very Heavy']
 
 data['rain_bin'] = pd.cut(data['rain'], bins=rain_bins, labels=rain_labels)
 
@@ -66,9 +66,19 @@ print(gust_counts.to_string())
 
 plot_stacked_delay_by_binned_feature(data, 'wind_gusts_10m', gust_bins, gust_labels)
 
-#snow accumulation 
+# Surface pressure
+pressure_bins = [-float('inf'), 980, 1000, 1020, float('inf')]
+pressure_labels = ['Very Low', 'Low', 'Normal', 'High']
 
-#rain accumulation
+data['pressure_bin'] = pd.cut(data['surface_pressure'], bins=pressure_bins, labels=pressure_labels)
+
+pressure_counts = data['pressure_bin'].value_counts().sort_index()
+print("Surface Pressure bin counts:\n")
+print(pressure_counts.to_string())
+
+plot_stacked_delay_by_binned_feature(data, 'surface_pressure', pressure_bins, pressure_labels)
 
 #save over file
-data.to_csv(INDIVIDUAL_ROUTES / route / f'{route}_binned.csv', index=False)
+data.to_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned.csv', index=False)
+
+

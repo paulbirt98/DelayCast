@@ -5,7 +5,8 @@ from pipeline_utils.config import (
     FS_RESULTS,
     ALL_ROUTE_FS,
     NUMERICAL_FEATURES,
-    CATEGORICAL_FEATURES
+    CATEGORICAL_FEATURES,
+    BINNED_FEATURES
 )
 from pipeline_utils.config import FS_RESULTS
 from pipeline_utils.feature_selectors import multicoll_heatmap, run_anova_f, run_chi_squared, run_mutual_info
@@ -33,17 +34,17 @@ if __name__ == '__main__':
 
     ##ADD ERROR HANDLING FOR ITEMS NOT IN THE LISTS
     kept_numerical_features = [f for f in NUMERICAL_FEATURES if f not in filtered_out_features]
-    kept_categorical_features = [f for f in CATEGORICAL_FEATURES if f not in filtered_out_features]
+    kept_categorical_features = [f for f in CATEGORICAL_FEATURES if f not in filtered_out_features] + BINNED_FEATURES
     
     #if no route given, run tests on the unified dataset
     if route:
         route = route.lower()
-        dataset = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv')
-        folder = FS_RESULTS / route 
+        dataset = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned.csv')
+        folder = FS_RESULTS / route / 'binned'
         folder.mkdir(parents=True, exist_ok=True) # make folder if it doesnt exist
-        anova_filepath = folder / f'{route}_anova.csv'
-        chi_filepath = folder / f'{route}_chi.csv'
-        mi_filepath = folder / f'{route}_mi.csv'
+        anova_filepath = folder / f'{route}_anova_binned.csv'
+        chi_filepath = folder / f'{route}_chi_binned.csv'
+        mi_filepath = folder / f'{route}_mi_binned.csv'
     else:
         route = 'all_routes'
         kept_categorical_features = kept_categorical_features + ['route']
@@ -52,6 +53,9 @@ if __name__ == '__main__':
         anova_filepath = folder / f'{route}_anova.csv'
         chi_filepath = folder / f'{route}_chi.csv'
         mi_filepath = folder / f'{route}_mi.csv'
+
+    rows_with_nan = dataset[dataset[kept_categorical_features].isna().any(axis=1)]
+    print(rows_with_nan.head())
 
 
     anova = run_anova_f(dataset, kept_numerical_features, 'classification')

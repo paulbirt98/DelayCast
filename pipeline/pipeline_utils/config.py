@@ -86,8 +86,8 @@ CUT_OFF_DATE = datetime(2025, 5, 31) - timedelta(days=182) #approx 6 months
 RECORDING_ERROR_MIN = -720
 RECORDING_ERROR_MAX = 720
 NO_DELAY_UPPER_BOUNDARY = 5
-MILD_DELAY_UPPER_BOUNDARY = 15
-MODERATE_DELAY_UPPER_BOUNDARY = 30
+MILD_DELAY_UPPER_BOUNDARY = 10
+MODERATE_DELAY_UPPER_BOUNDARY = 20
 
 #For use in feature selection
 NUMERICAL_FEATURES = [
@@ -122,8 +122,17 @@ BINNED_FEATURES = [
     'temp_bin',
     'snow_depth_bin',
     'rain_bin',
-    'gust_bin'
+    'gust_bin',
+    'surface_pressure_bin'
 ]
 
 SAMPLE_SIZE = 250000
 MAX_RARE_WEATHER = 60000
+
+#glq rare weather boundaries
+GLQ_LOW_TEMP = 2
+GLQ_HIGH_TEMP = 20
+GLQ_HEAVY_RAIN = 0.5
+GLQ_HIGH_GUSTS = 60
+GLQ_LOW_PRESSURE = 1000
+GLQ_HIGH_PRESSURE = 1020

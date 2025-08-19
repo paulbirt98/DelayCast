@@ -48,68 +48,79 @@ def tvt_split(route):
     validation_df.to_csv(validation_file, index=False)
     testing_df.to_csv(testing_file, index=False)
 
-def temperature_binning_glq(temperature):
-        """
-        
-        """
-        if pd.isna(temperature):
-            return "Issue Binning"
-        elif temperature <= -3:
-            return "Very Cold"
-        elif -3 < temperature <= 2:
-            return "Cold"
-        elif 2 < temperature <= 10:
-            return "Cool"
-        elif 10 < temperature <= 20:
-            return "Mild"
-        elif 20 < temperature <= 23:
-            return "Warm"
-        else:
-             return "Hot"
-        
-def snow_depth_binning_glq(snow_depth):
-        """
-        
-        """
-        if pd.isna(snow_depth):
-            return "Issue Binning"
-        elif snow_depth <= 0:
-            return "No Lying Snow"
-        elif 0 < snow_depth <= 0.03:
-            return "Dusting"
-        elif 0.03 < snow_depth <= 0.1:
-            return "Substantial"
-        elif 10 < snow_depth:
-            return "Deep"
+def sample_for_training(route, training_df, low_temperature, high_temperature, high_gusts, low_pressure, high_pressure, heavy_rain):
+    """
+    
+    """
+    print(f'\nNumber of rows in {route} training data: {len(training_df)}')
 
-def rain_binning_glq(rain):
-        """
-        
-        """
-        if pd.isna(rain):
-            return "Issue Binning"
-        elif rain <= 0:
-            return "No Rain"
-        elif 0 < rain <= 0.5:
-            return "Light"
-        elif 0.5 < rain <= 1:
-            return "Heavy"
-        elif  1 < rain:
-            return "Very Heavy"
-        
-def gust_binning_glq(gusts):
-        """
-        
-        """
-        if pd.isna(gusts):
-            return "Issue Binning"
-        elif gusts <= 20:
-            return "Calm"
-        elif 20 < gusts <= 40:
-            return "Breezy"
-        elif 40 < gusts <= 60:
-            return "Windy"
-        elif 60 < gusts <= 75:
-            return "Gale Force"
-        elif  75 < gusts:
-            return "Severe Gale"
+    #identofy minority classes to preserve
+    mild_rows = training_df[training_df['delay_classification'] == 'Mild Delay']
+    moderate_rows = training_df[training_df['delay_classification'] == 'Moderate Delay']
+    severe_rows = training_df[training_df['delay_classification'] == 'Severe Delay']
+
+    print(f"Keeping {len(mild_rows)} Mild, {len(moderate_rows)} Moderate, {len(severe_rows)} Severe")
+
+    minority_rows = pd.concat([mild_rows, moderate_rows, severe_rows], ignore_index=False)
+
+    #remove minority classes from main df
+    minority_rows_records = minority_rows.index
+    unprotected_records = training_df.drop(minority_rows_records)
+
+    #identify rare but important weather variables
+    rare_weather = unprotected_records[
+        (unprotected_records['snow_depth'] > 0) |
+        (unprotected_records['temperature_2m'] < low_temperature) |
+        (unprotected_records['temperature_2m'] > high_temperature) |
+        (unprotected_records['wind_gusts_10m'] > high_gusts) |
+        (unprotected_records['surface_pressure'] < low_pressure) |
+        (unprotected_records['surface_pressure'] > high_pressure) |
+        (unprotected_records['rain'] > heavy_rain)
+    ]
+
+    #remove rare weather to sample equal number from each route
+    rare_weather_records = rare_weather.index
+    unprotected_records = unprotected_records.drop(rare_weather_records)
+
+    #sample from no delays and no bad weather to max 40% total number of records
+    sample_data = unprotected_records.sample(n=min(int(len(training_df) * 0.4), len(unprotected_records)), random_state=42)
+    print(f'Number of rows sampled {len(sample_data)}')
+
+    #combine with rare weather
+    final_sample = pd.concat([sample_data, rare_weather, minority_rows], ignore_index=True)
+
+    print(f'{len(rare_weather)} rare event rows added back for {route}')
+    print(f"{len(mild_rows)} Mild, {len(moderate_rows)} Moderate and {len(severe_rows)} Severe delays added back for {route}")
+    print(f'Final sample size for {route}: {len(final_sample)} rows')
+
+    # Drop any rows with at least one NaN
+    final_sample_clean = final_sample.dropna()
+
+    print(f"Dropped {len(final_sample) - len(final_sample_clean)} rows with NaNs.")
+
+    final_sample_clean.to_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_training_data.csv', index=False)
+
+def threeclass_delay_classification(delay_minutes):
+    """
+    
+    """
+    if pd.isna(delay_minutes):
+        return "Issue Classifying"
+    elif delay_minutes < 5:
+        return "No Delay"
+    elif 5 <= delay_minutes < 15:
+        return "Minor Delay"
+    elif 15 <= delay_minutes:
+        return "Major Delay"
+    
+def binary_delay_classification(delay_minutes):
+    """
+    
+    """
+    if pd.isna(delay_minutes):
+        return "Issue Classifying"
+    elif delay_minutes < 5:
+        return "No Delay"
+    elif 5 <= delay_minutes:
+        return "Delay"
+    

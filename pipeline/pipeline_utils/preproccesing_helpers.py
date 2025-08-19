@@ -361,7 +361,7 @@ def calculate_delay_classification(delay_minutes):
     elif delay_minutes < NO_DELAY_UPPER_BOUNDARY:
         return "No Delay"
     elif NO_DELAY_UPPER_BOUNDARY <= delay_minutes < MILD_DELAY_UPPER_BOUNDARY:
-        return "Mild Delay"
+        return "Minor Delay"
     elif MILD_DELAY_UPPER_BOUNDARY <= delay_minutes < MODERATE_DELAY_UPPER_BOUNDARY:
         return "Moderate Delay"
     elif delay_minutes >= MODERATE_DELAY_UPPER_BOUNDARY:
