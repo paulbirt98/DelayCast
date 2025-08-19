@@ -2,11 +2,11 @@ from flask import Flask, render_template, request
 import os
 from dotenv import load_dotenv
 from flask import jsonify
-from web_app.config import METADATA_DIR
+from web_app.config import METADATA_DIR, WANTED_ELRS
 import json
 import pandas as pd
-from pathlib import Path
-
+import geopandas as gpd
+from shapely.geometry import LineString
 
 app = Flask(__name__)
 
@@ -31,7 +31,6 @@ def station_details():
                 data = json.load(f)
 
                 for name, details in data.items():
-                    station_name = name
                     code = details.get('station_code')
                     latitude = details.get('latitude')
                     longitude = details.get('longitude')
@@ -41,6 +40,37 @@ def station_details():
                         all_stations[name] = (code, latitude, longitude) 
 
     return jsonify(all_stations)
+
+@app.route('/line_coords')
+def line_details():
+
+    #get netwrok fusion file path and read to dataframe
+    nf_filepath = METADATA_DIR / 'nf_core.csv'
+    lines_df = pd.read_csv(nf_filepath)
+
+    line_details = []
+
+    #loop through the desired elrs and gather coords
+    for toc, attributes in WANTED_ELRS.items():
+        colour = attributes.get('colour')
+        for elr in attributes.get('lines'):
+            elr_df = lines_df[lines_df['elr'] == elr].sort_values('total_yards')
+            coords = elr_df[['longitude', 'latitude']].values.tolist()
+            
+            line = LineString(coords)
+            line_details.append({
+                'type': 'Feature',
+                'geometry': gpd.GeoSeries([line]).__geo_interface__['features'][0]['geometry'],
+                'properties': {'elr': elr, 'operator': toc, 'colour': colour}
+            })
+    
+    geojson = {
+        "type": 'FeatureCollection',
+        "features": line_details
+    }
+
+    return jsonify(geojson)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

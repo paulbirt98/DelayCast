@@ -12,12 +12,18 @@ try:
     station_res = requests.get(f"{FLASK_API_URL}/station_details")
     #check for exceptions
     station_res.raise_for_status()
-
     station_data = station_res.json()
 
+    #call flask for line details
+    lines_res = requests.get(f"{FLASK_API_URL}/line_coords")
+    lines_res.raise_for_status()
+    lines_geojson = lines_res.json()
+
+    #build the map including station and line overlays
     st.subheader("National Map")
     m = build_base_map()
     add_stations(m, station_data)
+    add_lines(m, lines_geojson)
 
     html(m._repr_html_(), height=500)
     

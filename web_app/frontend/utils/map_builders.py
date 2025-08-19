@@ -37,21 +37,17 @@ def add_stations(m, all_stations, colour='#000000', size=3):
             fill=True, fill_opacity=0.8, 
         ).add_to(m)
 
-def add_lines(m, metadata):
+def add_lines(m, line_data, weight=3):
     """
     
     """
-    #get route line visuals
-    core = pd.read_csv(METADATA / 'nf_core.csv')
+    def style_function(feature):
+        # read colour per-feature (fallback to black if missing)
+        colour = feature.get('properties', {}).get('colour', 'black')
+        return {'color': colour, 'weight': weight}
 
-    geo_data = []
-
-    for elr, group in core.groupby('elr'):
-        group_sorted = group.sort_values('total_yards')
-        coords = list(zip(group_sorted['longitude'], group_sorted['latitude']))
-        geo_data.append({'elr': elr, 'geometry': LineString(coords)})
-
-    #get geo dataframe
-    geo_df = gpd.GeoDataFrame(geo_data, crs='EPSG:4326')
-
-    geo_df.to_file('studied_routes.geojson', driver="GeoJSON")
+    folium.GeoJson(
+        line_data,
+        tooltip=folium.GeoJsonTooltip(fields=['operator']),
+        style_function=style_function
+    ).add_to(m)
