@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask
 import os
 from dotenv import load_dotenv
 from flask import jsonify
@@ -22,7 +22,8 @@ def api_message():
 def station_details():
 
     #placeholder
-    all_stations = {}
+    all_stations = []
+    existing = set()
 
     #for all station json files add all stations to 'all_stations'
     for file in METADATA_DIR.iterdir():
@@ -32,12 +33,22 @@ def station_details():
 
                 for name, details in data.items():
                     code = details.get('station_code')
-                    latitude = details.get('latitude')
                     longitude = details.get('longitude')
+                    latitude = details.get('latitude')
                     if latitude is None or longitude is None:
                         continue
-                    if name not in all_stations:
-                        all_stations[name] = (code, latitude, longitude) 
+
+                    #if its already been added via a different file skip it
+                    if code in existing:
+                        continue
+                    existing.add(code)
+
+                    all_stations.append({
+                        'station_name': name,
+                        'station_code': code,
+                        'longitude': float(longitude),
+                        'latitude': float(latitude),
+                    })
 
     return jsonify(all_stations)
 

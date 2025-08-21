@@ -17,18 +17,18 @@ METADATA_DIR = Path(os.getenv("METADATA", METADATA_LOCAL_PATH)).resolve()
 WANTED_ELRS = {
     'gwr': {
         "lines": ['MLN1','MLN2','MLN3','MLN4','BHL','SWY','CCL','WEY'],
-        "colour": "green"
+        "colour": [0, 255, 0]
     },
     'sr': {
         "lines": ['HGL2', 'HGL1','SCM4','SCM3','EGM1'],
-        "colour": "blue"
+        "colour": [0, 0, 255]
     },
     'vt': {
         "lines": ['LEC1', 'LEC2', 'LEC4', 'CGJ1', 'WJL1', 'WJL2', 'WJL3', 'WJL4'],
-        "colour": "yellow"
+        "colour": [255, 255, 0]
     },
     'tl': {
         "lines": ['VTB3', 'VTB2', 'LBW', 'BMJ', 'HHH', 'FTL', 'SPC1', 'MCL'],
-        "colour": "red"
+        "colour": [255, 0, 0]
     }
 }

@@ -1,8 +1,8 @@
 import streamlit as st
 import requests
-from utils.map_builders import build_base_map, add_stations, add_lines
-from streamlit.components.v1 import html
+from utils.map_builders import build_map, build_lines
 from web_app.config import FLASK_API_URL
+
 
 st.title("DelayCast")
 
@@ -17,16 +17,15 @@ try:
     #call flask for line details
     lines_res = requests.get(f"{FLASK_API_URL}/line_coords")
     lines_res.raise_for_status()
-    lines_geojson = lines_res.json()
+    lines_data = lines_res.json()
 
     #build the map including station and line overlays
     st.subheader("National Map")
-    m = build_base_map()
-    add_stations(m, station_data)
-    add_lines(m, lines_geojson)
 
-    html(m._repr_html_(), height=500)
-    
+    lines_geojson = build_lines(lines_data)
+    map = build_map(station_data, lines_geojson)
+
+    st.pydeck_chart(map, use_container_width=True)
 
 except Exception as e:
     st.error(f'Error connecting to Flask: {e}')
