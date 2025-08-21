@@ -23,7 +23,7 @@ def build_lines(lines_geojson):
     
     return train_lines
 
-def build_map(station_data, lines_geojson, line_widths=15):
+def build_map(station_data, lines_geojson, centre=(-3.0, 54.5), zoom=5.8, line_widths=15):
     """
     
     """
@@ -46,7 +46,7 @@ def build_map(station_data, lines_geojson, line_widths=15):
     stations_layer = pdk.Layer(
         "ScatterplotLayer",
         data=station_data,
-        get_position="[longitude, latitude]",
+        get_position=["longitude", "latitude"],
         get_fill_color=station_colour,
         get_line_color=[0, 0, 0],
         line_width_min_pixels=2,
@@ -60,21 +60,14 @@ def build_map(station_data, lines_geojson, line_widths=15):
 
     #displayed details on hover
     tooltip = {
-        "html": """
-        {% if station_name %}
-            <b>{station_name}</b> ({code})
-        {% elif operator %}
-            <b>{operator}</b><br/>ELR: {elr}
-        {% else %}
-            Feature
-        {% endif %}
-        """,
+        "html": 
+            "<b>{station_name}</b> ({station_code})<br/>",
         "style": {"backgroundColor": "white", "color": "black"}
     }
 
     #centre on UK
     view_state = pdk.ViewState(
-        latitude=54.5, longitude=-3.0, zoom=5.8, pitch=0, bearing=0
+        longitude=centre[0], latitude=centre[1], zoom=zoom, pitch=0, bearing=0
     )
 
     #join layers

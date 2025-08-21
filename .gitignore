@@ -6,3 +6,4 @@ __pycache__/
 /data/metadata
 /data/raw_api_responses
 pyproject.toml
+delaycast.egg-info
