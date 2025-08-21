@@ -51,11 +51,8 @@ try:
             # Navigate to station page when the user clicks the button
             if st.button("Open station page", disabled=(selected_code is None)):
                 if selected_code:
-                    st.query_params["code"] = selected_code   # keep consistent with Station page
-                    try:
-                        st.switch_page("web_app/frontend/pages/Station.py")
-                    except Exception:
-                        st.rerun()
+                    st.query_params["code"] = selected_code  
+                    st.switch_page("pages/Station_Info.py")
 
     with column_two:
 
