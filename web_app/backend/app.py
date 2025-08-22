@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 import os
 from dotenv import load_dotenv
 from flask import jsonify
@@ -18,8 +18,8 @@ app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
 def api_message():
     return jsonify({'message': 'Hello from Flask!'})
 
-@app.route('/station_details')
-def station_details():
+@app.route('/all_stations')
+def all_stations():
 
     #placeholder
     all_stations = []
@@ -52,7 +52,7 @@ def station_details():
 
     return jsonify(all_stations)
 
-@app.route('/line_coords')
+@app.route('/line_details')
 def line_details():
 
     #get netwrok fusion file path and read to dataframe
@@ -81,6 +81,37 @@ def line_details():
     }
 
     return jsonify(geojson)
+
+@app.route('/station_info')
+def station_info():
+
+    station_code = request.args.get('station_code', '').upper()
+
+    if not station_code:
+        return jsonify({'Error': 'No station code provided in request'}), 400
+    
+    #iterate through and pull only the relevant station details
+    for file in METADATA_DIR.iterdir():
+        if file.suffix.lower() == '.json':
+            with open(file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+                for name, details in data.items():
+                    if details.get('station_code') == station_code:
+                        code = details.get('station_code')
+                        longitude = details.get('longitude')
+                        latitude = details.get('latitude')
+
+                        station_info = {
+                        'station_name': name,
+                        'station_code': code,
+                        'longitude': float(longitude),
+                        'latitude': float(latitude),
+                        }
+
+                        return jsonify(station_info)
+    
+    return jsonify({'Error': 'No station found with code provided'}), 401
 
 
 if __name__ == '__main__':

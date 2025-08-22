@@ -11,13 +11,13 @@ st.title("DelayCast")
 
 try:
     # Call Flask backend for station details
-    station_res = requests.get(f"{FLASK_API_URL}/station_details")
+    station_res = requests.get(f"{FLASK_API_URL}/all_stations")
     #check for exceptions
     station_res.raise_for_status()
     station_data = station_res.json()
 
     #call flask for line details
-    lines_res = requests.get(f"{FLASK_API_URL}/line_coords")
+    lines_res = requests.get(f"{FLASK_API_URL}/line_details")
     lines_res.raise_for_status()
     lines_data = lines_res.json()
 
@@ -48,11 +48,10 @@ try:
             centre = (details['longitude'], details['latitude'])
             zoom = 11
 
-            # Navigate to station page when the user clicks the button
-            if st.button("Open station page", disabled=(selected_code is None)):
-                if selected_code:
-                    st.query_params["code"] = selected_code  
-                    st.switch_page("pages/Station_Info.py")
+            if st.button("Go to station info", type='primary', use_container_width=True):
+                st.query_params['station_code'] = selected_code
+                st.session_state['station_code'] = selected_code
+                st.switch_page("Station_Info.py")
 
     with column_two:
 
