@@ -8,7 +8,7 @@ station_code = st.query_params.get("station_code")
 
 if not station_code:
     station_code = st.session_state.get('station_code')
-    st.query_params['station_code'] = station_code
+    st.query_params['station_code'] = station_code 
 
 #home button
 if st.button("Back to Home", type="primary"):
@@ -24,7 +24,17 @@ try:
     station_name = station_info.get('station_name')
 
     st.title(f"{station_name} ({station_code})")
-    st.write(f"You are now viewing data for {station_name}")
+
+    #make columns
+    current_condition_col, current_delay_risk_col = st.columns(3, 1)
+
+    with current_condition_col:
+        st.subheader('Current Conditions')
+
+
+    
+    with current_delay_risk_col:
+        st.write('Current Delay Risk')
 
 except requests.exceptions.HTTPError as e:
     st.error(f'Error fetching station info: {e}')

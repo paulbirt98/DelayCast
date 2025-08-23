@@ -7,9 +7,10 @@ import json
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import LineString
-from web_app.database.db_utils.init_db import Station, Route, RouteStation
+from web_app.database.db_utils.init_db import Station, Route, RouteStation, HourlyForecast
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
+from datetime import date, datetime
 
 app = Flask(__name__)
 
@@ -95,6 +96,26 @@ def line_details():
     }
 
     return jsonify(geojson)
+
+@app.route('/get_location_forecast')
+def get_location_weather():
+
+    #get todays date
+    today = date.today()
+
+    station_code = request.args.get('station_code', '').upper()
+
+    if not station_code:
+        return jsonify({'Error': 'No location provided in request'}), 400
+
+    #query db for the requested station info
+    session = Session()
+
+    #match the station_id
+    station_id = session.query(Station).filter_by(station_code=station_code).first()
+
+    hourly_forecast = session.query(HourlyForecast).filter_by(station_=station_code and timestamp_utc == )
+    session.close()
 
 if __name__ == '__main__':
     app.run(debug=True)
