@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, Float, Boolean, DateTime, Date, Integer, ForeignKey
+from sqlalchemy import UniqueConstraint, create_engine, Column, String, Float, Boolean, DateTime, Date, Integer, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship
 from web_app.config import WEBAPP_DB
 
@@ -21,6 +21,9 @@ class Station(Base):
 #hourly forecasts table
 class HourlyForecast(Base):
     __tablename__ = 'hourly_forecast'
+    __table_args__ = (
+        UniqueConstraint('station_id', 'timestamp_utc', name='uix_station_timestamp'),
+    )
 
     forecast_id = Column(Integer, primary_key=True, autoincrement=True)
     station_id = Column(Integer, ForeignKey('station.station_id'), nullable=False)
