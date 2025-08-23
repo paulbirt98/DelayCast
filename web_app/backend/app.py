@@ -2,12 +2,12 @@ from flask import Flask, request
 import os
 from dotenv import load_dotenv
 from flask import jsonify
-from web_app.config import METADATA_DIR, NF_CORE, WANTED_ELRS, FORECAST_DB
+from web_app.config import METADATA_DIR, NF_CORE, WANTED_ELRS, WEBAPP_DB
 import json
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import LineString
-from web_app.database.db_utils.init_db import Station, Route, RouteStation, TrainStopping
+from web_app.database.db_utils.init_db import Station, Route, RouteStation
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 
@@ -18,7 +18,7 @@ load_dotenv()
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
 
 #connect to db
-db_filepath_string = str(FORECAST_DB)
+db_filepath_string = str(WEBAPP_DB)
 engine = create_engine(f'sqlite:///{db_filepath_string}')
 Session = sessionmaker(bind=engine)
 
@@ -51,7 +51,8 @@ def station_info():
     
     #query db for the requested station info
     session = Session()
-    station = session.query(Station).filter_by(station_code=station_code)
+    station = session.query(Station).filter_by(station_code=station_code).first()
+    session.close()
     
     if station is None:
         return jsonify({'Error': 'No station found with code provided'}), 404

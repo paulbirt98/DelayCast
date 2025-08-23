@@ -14,7 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 METADATA_LOCAL_PATH = PROJECT_ROOT / 'data' / 'metadata'
 METADATA_DIR = Path(os.getenv("METADATA", METADATA_LOCAL_PATH)).resolve()
 
-NF_CORE = PROJECT_ROOT / 'web_app' / 'database' / 'nf_core'
+NF_CORE = PROJECT_ROOT / 'web_app' / 'database' / 'nf_core.csv'
 STOPPINGS_DATA = PROJECT_ROOT / 'data' / 'processed' / 'unified_routes' / 'unified_routes.csv'
 
 #path for database initialisations
