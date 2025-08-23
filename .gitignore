@@ -1,10 +1,10 @@
 __pycache__/
 .env
 *.sqlite
+*.db
 .cache/
 /data/
 /data/metadata
 /data/raw_api_responses
 pyproject.toml
 delaycast.egg-info
-/web_app/database/web_app.db
