@@ -2,11 +2,14 @@ from flask import Flask, request
 import os
 from dotenv import load_dotenv
 from flask import jsonify
-from web_app.config import METADATA_DIR, WANTED_ELRS
+from web_app.config import METADATA_DIR, NF_CORE, WANTED_ELRS, FORECAST_DB
 import json
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import LineString
+from web_app.database.db_utils.init_db import Station, Route, RouteStation, TrainStopping
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
 
 app = Flask(__name__)
 
@@ -14,49 +17,59 @@ app = Flask(__name__)
 load_dotenv()
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
 
-@app.route('/api/message')
-def api_message():
-    return jsonify({'message': 'Hello from Flask!'})
+#connect to db
+db_filepath_string = str(FORECAST_DB)
+engine = create_engine(f'sqlite:///{db_filepath_string}')
+Session = sessionmaker(bind=engine)
 
 @app.route('/all_stations')
 def all_stations():
 
-    #placeholder
     all_stations = []
-    existing = set()
 
-    #for all station json files add all stations to 'all_stations'
-    for file in METADATA_DIR.iterdir():
-        if file.suffix.lower() == '.json':
-            with open(file, "r", encoding="utf-8") as f: #read the json file
-                data = json.load(f)
+    session = Session()
+    stations = session.query(Station).all()
+    session.close()
 
-                for name, details in data.items():
-                    code = details.get('station_code')
-                    longitude = details.get('longitude')
-                    latitude = details.get('latitude')
-                    if latitude is None or longitude is None:
-                        continue
-
-                    #if its already been added via a different file skip it
-                    if code in existing:
-                        continue
-                    existing.add(code)
-
-                    all_stations.append({
-                        'station_name': name,
-                        'station_code': code,
-                        'longitude': float(longitude),
-                        'latitude': float(latitude),
-                    })
+    for station in stations:
+        all_stations.append({
+            "station_name": station.station_name,
+            "station_code": station.station_code,
+            "longitude": station.longitude,
+            "latitude": station.latitude
+        })
 
     return jsonify(all_stations)
+
+@app.route('/station_info')
+def station_info():
+
+    station_code = request.args.get('station_code', '').upper()
+
+    if not station_code:
+        return jsonify({'Error': 'No station code provided in request'}), 400
+    
+    #query db for the requested station info
+    session = Session()
+    station = session.query(Station).filter_by(station_code=station_code)
+    
+    if station is None:
+        return jsonify({'Error': 'No station found with code provided'}), 404
+    
+    station_info = {
+        "station_name": station.station_name,
+        "station_code": station.station_code,
+        "longitude": station.longitude,
+        "latitude": station.latitude
+    }
+
+    return jsonify(station_info)
 
 @app.route('/line_details')
 def line_details():
 
     #get netwrok fusion file path and read to dataframe
-    nf_filepath = METADATA_DIR / 'nf_core.csv'
+    nf_filepath = NF_CORE
     lines_df = pd.read_csv(nf_filepath)
 
     line_details = []
@@ -81,38 +94,6 @@ def line_details():
     }
 
     return jsonify(geojson)
-
-@app.route('/station_info')
-def station_info():
-
-    station_code = request.args.get('station_code', '').upper()
-
-    if not station_code:
-        return jsonify({'Error': 'No station code provided in request'}), 400
-    
-    #iterate through and pull only the relevant station details
-    for file in METADATA_DIR.iterdir():
-        if file.suffix.lower() == '.json':
-            with open(file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-                for name, details in data.items():
-                    if details.get('station_code') == station_code:
-                        code = details.get('station_code')
-                        longitude = details.get('longitude')
-                        latitude = details.get('latitude')
-
-                        station_info = {
-                        'station_name': name,
-                        'station_code': code,
-                        'longitude': float(longitude),
-                        'latitude': float(latitude),
-                        }
-
-                        return jsonify(station_info)
-    
-    return jsonify({'Error': 'No station found with code provided'}), 401
-
 
 if __name__ == '__main__':
     app.run(debug=True)

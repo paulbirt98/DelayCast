@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
-from web_app.frontend.utils.map_builder import build_map, build_lines
-from web_app.frontend.utils.ui_helpers import map_name_to_details
+from web_app.frontend.fe_utils.map_builder import build_map, build_lines
+from web_app.frontend.fe_utils.ui_helpers import map_name_to_details
 from web_app.config import FLASK_API_URL
 
 st.set_page_config(layout="wide", page_title="DelayCast")

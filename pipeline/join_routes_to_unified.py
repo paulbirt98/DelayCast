@@ -1,5 +1,5 @@
 import pandas as pd
-from pipeline_utils.config import INDIVIDUAL_ROUTES, UNIFIED_ROUTES_DIR, SAMPLE_SIZE, MAX_PROTECTED_SAMPLE
+from pipeline_utils.config import INDIVIDUAL_ROUTES, UNIFIED_ROUTES_DIR
 
 if __name__ == '__main__':
 

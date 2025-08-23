@@ -4,7 +4,7 @@ from pipeline_utils.preproccesing_helpers import calculate_delay_classification
 from pipeline_utils.eng_helpers import tvt_split, threeclass_delay_classification, binary_delay_classification
 
 #assign route
-route = 'glq_inv'
+route = 'eus_liv'
 route_filepath = INDIVIDUAL_ROUTES / route / f'{route}_route.csv'
 
 #read file and recalculate delay classes
