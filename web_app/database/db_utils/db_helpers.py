@@ -2,7 +2,7 @@ import json
 from shapely.geometry import LineString
 from flask import jsonify
 from web_app.config import METADATA_DIR, NF_CORE, WANTED_ELRS, STOPPINGS_DATA
-from init_db import Station, TrainStopping, Route, RouteStation
+from init_db import Station, Route, RouteStation
 import pandas as pd
 from tqdm import tqdm
 
@@ -102,36 +102,3 @@ def get_all_route_stations(stoppings_df, code_id_dict, route_id_dict):
             ))
 
     return all_route_stations
-
-def get_all_stoppings(stoppings_df, code_id_dict, route_id_dict):
-    """
-    
-    """
-    all_stoppings = []
-
-    for row in tqdm(stoppings_df.itertuples(index=False), total=len(stoppings_df), desc='Reading stoppings dataframe'):
-        route_id = route_id_dict.get(row.route)
-        station_id = code_id_dict.get(row.station)
-
-        all_stoppings.append(TrainStopping(
-            route_id=route_id,
-            station_id=station_id,
-            date=row.date_x.date(),
-            scheduled_time=row.scheduled_time,
-            actual_time=row.actual_time,
-            hour_of_day=row.hour,
-            day_of_week=row.day,
-            month=row.month,
-            direction=row.direction,
-            delay_minutes=row.delay_minutes,
-            delay_classification=row.delay_classification,
-            temp_2m=row.temperature_2m,
-            relative_humidity=row.relative_humidity_2m,
-            rain=row.rain,
-            gusts=row.wind_gusts_10m,
-            snow_depth=row.snow_depth,
-            surface_pressure=row.surface_pressure,
-            is_day=bool(row.is_day)
-        ))
-
-    return all_stoppings

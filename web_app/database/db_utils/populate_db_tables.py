@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db_helpers import get_all_stations, map_station_to_id, get_all_routes, get_all_route_stations, get_all_stoppings, map_route_to_id
+from db_helpers import get_all_stations, map_station_to_id, get_all_routes, get_all_route_stations, map_route_to_id
 from web_app.config import WEBAPP_DB, STOPPINGS_DATA
-from init_db import Station, TrainStopping, Route, RouteStation
+from init_db import Station, Route, RouteStation
 import pandas as pd
 
 if __name__ == '__main__':
@@ -17,7 +17,6 @@ if __name__ == '__main__':
 
     #clear tables to avoid duplicates on rerun
     session.query(Station).delete()
-    session.query(TrainStopping).delete()
     session.query(Route).delete()
     session.query(RouteStation).delete()
 
@@ -47,14 +46,6 @@ if __name__ == '__main__':
     session.add_all(route_stations)
     session.flush()
     print(f'Added {len(route_stations)} route_station rows to the Route_Station table')
-
-    #add stoppings
-    stoppings = get_all_stoppings(stoppings_df, code_id_dict, route_id_dict)
-    batch_size = 100_000
-    for i in range(0, len(stoppings), batch_size):
-        session.bulk_save_objects(stoppings[i:i+batch_size])
-        session.commit()
-        print(f"Committed rows {i} to {i+batch_size} to train stopping table")
 
     #close session
     session.commit()

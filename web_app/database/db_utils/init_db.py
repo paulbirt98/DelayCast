@@ -17,7 +17,6 @@ class Station(Base):
 
     #fk relationships
     forecasts = relationship("HourlyForecast", back_populates="station")
-    stoppings = relationship("TrainStopping", back_populates="station")
 
 #hourly forecasts table
 class HourlyForecast(Base):
@@ -46,7 +45,6 @@ class Route(Base):
     operator = Column(String(100))
 
     stations = relationship("RouteStation", back_populates="route")
-    stoppings = relationship("TrainStopping", back_populates="route")
 
 
 #route - station table
@@ -60,37 +58,6 @@ class RouteStation(Base):
 
     route = relationship("Route", back_populates="stations")
     station = relationship("Station")
-
-
-#stoppings table
-class TrainStopping(Base):
-    __tablename__ = 'train_stopping'
-
-    stopping_id = Column(Integer, primary_key=True, autoincrement=True)
-    route_id = Column(Integer, ForeignKey('route.route_id'))
-    station_id = Column(Integer, ForeignKey('station.station_id'))
-
-    date = Column(Date)
-    scheduled_time = Column(DateTime)
-    actual_time = Column(DateTime)
-    hour_of_day = Column(Integer)
-    day_of_week = Column(Integer)
-    month = Column(Integer)
-    direction = Column(String(50))
-
-    delay_minutes = Column(Float)
-    delay_classification = Column(String(50))
-
-    temp_2m = Column(Float)
-    relative_humidity = Column(Float)
-    rain = Column(Float)
-    gusts = Column(Float)
-    snow_depth = Column(Float)
-    surface_pressure = Column(Float)
-    is_day = Column(Boolean)
-
-    route = relationship("Route", back_populates="stoppings")
-    station = relationship("Station", back_populates="stoppings")
 
 #create the db file in the database folder
 if __name__ == '__main__':
