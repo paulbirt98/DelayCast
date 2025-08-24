@@ -8,3 +8,4 @@ __pycache__/
 /data/raw_api_responses
 pyproject.toml
 delaycast.egg-info
+/web_app/models

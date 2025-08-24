@@ -14,7 +14,7 @@ from pipeline_utils.tvt_helpers import report_logloss_skill, report_brier, expec
 if __name__ == '__main__':
     
     route = 'btn_bdm'
-    # --- Load data ---
+    #load data
     train = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv')
     val = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_validation_data.csv')
     test = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_testing_data.csv')
@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 
 
-    # --- Drop target-related columns ---
+    #drop unneeded cols
     drop_cols = ['rid', 'date_x', 'scheduled_time', 'actual_time', 'lc_reason', 
                 'is_first_station', 'is_terminus', 'delay_classification', 
                 'delay_minutes', 'nearest_hour', 'date_y', 'cloud_cover', 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     testing_features = test.drop(columns=drop_cols, errors='ignore').fillna(0)
     testing_target = test['delay_classification']
 
-    # --- One-hot encode + align ---
+    #one-hot encode + align
     training_features = pd.get_dummies(training_features)
     val_features = pd.get_dummies(val_features)
     testing_features = pd.get_dummies(testing_features)
@@ -50,15 +50,15 @@ if __name__ == '__main__':
     training_features, val_features = training_features.align(val_features, join='left', axis=1, fill_value=0)
     training_features, testing_features = training_features.align(testing_features, join='left', axis=1, fill_value=0)
 
-    # --- Step 1: Train base model ---
+    #Train base model
     base_clf = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced', n_jobs=-1)
     base_clf.fit(training_features, training_target)
 
-    # --- Step 2: Calibrate using validation set --
+    #Calibrate using validation set
     calibrator = CalibratedClassifierCV(estimator=base_clf, method='isotonic', cv='prefit')
     calibrator.fit(val_features, val_target)
 
-        # --- Step 3: Evaluate on test set ---
+    #Evaluate on test set
     probs = calibrator.predict_proba(testing_features)
     class_labels = calibrator.classes_
 
@@ -118,7 +118,7 @@ if __name__ == '__main__':
                 f"gap={r['gap']:.3f} contribution={r['contribution']:.4f}")
 
     if not route:
-        # after you have: probs (n x K), class_labels, testing_target_encoded, y_test, and `test` with a 'route' column
+
         from sklearn.metrics import log_loss, brier_score_loss, f1_score
         from sklearn.preprocessing import label_binarize
 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
             y_true_int = g['y_true_int'].to_numpy()
             P_g = g[class_labels].to_numpy()
 
-            # multiclass log loss (lower is better)
+            # multiclass log loss
             ll = log_loss(y_true_int, P_g, labels=range(K))
 
             # macro Brier across classes
@@ -142,13 +142,7 @@ if __name__ == '__main__':
             briers = [brier_score_loss(Ybin[:,k], P_g[:,k]) for k in range(K)]
             brier_macro = float(np.mean(briers))
 
-            # optional macro-F1 using argmax (higher is better)
-            y_pred_int = P_g.argmax(axis=1)
-            f1m = f1_score(y_true_int, y_pred_int, average='macro')
-
-            return pd.Series({"log_loss": ll, "brier_macro": brier_macro, "f1_macro": f1m})
+            return pd.Series({"log_loss": ll, "brier_macro": brier_macro})
 
         route_scores_unified = df_eval.groupby('route').apply(per_route_scores).sort_values('log_loss')
         print(route_scores_unified)
-
-
