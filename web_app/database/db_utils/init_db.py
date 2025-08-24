@@ -1,4 +1,4 @@
-from sqlalchemy import UniqueConstraint, create_engine, Column, String, Float, Boolean, DateTime, Date, Integer, ForeignKey
+from sqlalchemy import UniqueConstraint, create_engine, Column, String, Float, Boolean, DateTime, Integer, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship
 from web_app.config import WEBAPP_DB
 
@@ -29,6 +29,7 @@ class HourlyForecast(Base):
     station_id = Column(Integer, ForeignKey('station.station_id'), nullable=False)
     timestamp_utc = Column(DateTime, nullable=False)
 
+    weather_code = Column(Integer)
     temp_2m = Column(Float)
     relative_humidity = Column(Float)
     rain = Column(Float)

@@ -32,7 +32,7 @@ url = "https://api.open-meteo.com/v1/forecast"
 params = {
 	"latitude": [latitude for latitude, _ in coords],
 	"longitude": [longitude for _, longitude in coords],
-	"hourly": ["temperature_2m", "relative_humidity_2m", "rain", "snow_depth", "surface_pressure", "wind_gusts_10m", "is_day"],
+	"hourly": ["temperature_2m", "relative_humidity_2m", "rain", "snow_depth", "surface_pressure", "wind_gusts_10m", "is_day", "weather_code"],
 	"forecast_hours": 1,
 }
 responses = openmeteo.weather_api(url, params=params)
@@ -56,6 +56,7 @@ for i, response in enumerate(responses):
 	hourly_surface_pressure = hourly.Variables(4).ValuesAsNumpy()
 	hourly_wind_gusts_10m = hourly.Variables(5).ValuesAsNumpy()
 	hourly_is_day = hourly.Variables(6).ValuesAsNumpy()
+	hourly_weather_code = hourly.Variables(7).ValuesAsNumpy()
 	
 	hourly_data = {"date": pd.date_range(
 		start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
@@ -71,6 +72,7 @@ for i, response in enumerate(responses):
 	hourly_data["surface_pressure"] = hourly_surface_pressure
 	hourly_data["wind_gusts_10m"] = hourly_wind_gusts_10m
 	hourly_data["is_day"] = hourly_is_day
+	hourly_data["weather_code"] = hourly_weather_code
 	
 	hourly_dataframe = pd.DataFrame(data = hourly_data)
     
@@ -82,7 +84,8 @@ for i, response in enumerate(responses):
         "date": "timestamp_utc",
         "temperature_2m": "temp_2m",
         "relative_humidity_2m": "relative_humidity",
-        "wind_gusts_10m": "gusts"
+        "wind_gusts_10m": "gusts",
+		"weather_code": "weather_code"
     }, inplace=True)
 	
     #upsert each row to repalce previous forecasts if applicable
@@ -97,6 +100,7 @@ for i, response in enumerate(responses):
             surface_pressure=row.surface_pressure,
             gusts=row.gusts,
             is_day=bool(row.is_day),
+			weather_code=row.weather_code
         ).on_conflict_do_update(
             index_elements=["station_id", "timestamp_utc"],
             set_={
@@ -107,6 +111,7 @@ for i, response in enumerate(responses):
                 "surface_pressure": row.surface_pressure,
                 "gusts": row.gusts,
                 "is_day": bool(row.is_day),
+				"weather_code": row.weather_code
             }
         )
 		session.execute(statement)

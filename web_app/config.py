@@ -17,8 +17,14 @@ METADATA_DIR = Path(os.getenv("METADATA", METADATA_LOCAL_PATH)).resolve()
 NF_CORE = PROJECT_ROOT / 'web_app' / 'database' / 'nf_core.csv'
 STOPPINGS_DATA = PROJECT_ROOT / 'data' / 'processed' / 'unified_routes' / 'unified_routes.csv'
 
+#for serving weather icons
+WEATHER_ICON_DIR = PROJECT_ROOT / 'web_app' / 'backend' / 'static' / 'weather_icons'
+
 #path for database initialisations
 WEBAPP_DB = PROJECT_ROOT / 'web_app' / 'database' / 'web_app.db'
+
+#length of forecast(days)
+FORECAST_LENGTH = 5 
 
 WANTED_ELRS = {
     'gwr': {
