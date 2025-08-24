@@ -63,7 +63,12 @@ def build_map(station_data, lines_geojson, centre=(-3.0, 54.5), zoom=5.8, line_w
     #displayed details on hover
     tooltip = {
         "html": 
-            "<b>{station_name}</b> ({station_code})<br/>",
+            """
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div><b>{station_name}</b> ({station_code})</div>
+                <img src="{icon}" width="40" height="40" style="display:block"/>
+            </div>
+            """,
         "style": {"backgroundColor": "white", "color": "black"}
     }
 

@@ -18,7 +18,7 @@ NF_CORE = PROJECT_ROOT / 'web_app' / 'database' / 'nf_core.csv'
 STOPPINGS_DATA = PROJECT_ROOT / 'data' / 'processed' / 'unified_routes' / 'unified_routes.csv'
 
 #for serving weather icons
-WEATHER_ICON_DIR = PROJECT_ROOT / 'web_app' / 'backend' / 'static' / 'weather_icons'
+WEATHER_ICON_DIR = PROJECT_ROOT / 'web_app' / 'frontend' / 'static' / 'weather_icons'
 
 #path for database initialisations
 WEBAPP_DB = PROJECT_ROOT / 'web_app' / 'database' / 'web_app.db'

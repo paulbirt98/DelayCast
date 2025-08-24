@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
 import os
 from dotenv import load_dotenv
 from flask import jsonify
@@ -11,7 +11,8 @@ from web_app.database.db_utils.init_db import Station, Route, RouteStation, Hour
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, func
 from datetime import date, datetime, timedelta
-from flask_helpers import get_most_recent_forecast
+from web_app.backend.flask_helpers import get_most_recent_forecast
+
 
 app = Flask(__name__)
 
@@ -164,13 +165,8 @@ def get_location_forecast():
     session.close()
 
     return jsonify(forecast_object)
-
-@app.route('/current_weather')
-def get_current_weather():
     
-    session = Session()
-
-    now = datetime.now()
+    
 
     
 

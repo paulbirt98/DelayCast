@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from web_app.frontend.fe_utils.map_builder import build_map, build_lines
-from web_app.frontend.fe_utils.ui_helpers import map_name_to_details
+from web_app.frontend.fe_utils.ui_helpers import map_name_to_details, add_latest_weather
 from web_app.config import FLASK_API_URL
 
 st.set_page_config(layout="wide", page_title="DelayCast")
@@ -15,6 +15,9 @@ try:
     #check for exceptions
     station_res.raise_for_status()
     station_data = station_res.json()
+
+    #add weather data
+    station_data = add_latest_weather(station_data)
 
     #call flask for line details
     lines_res = requests.get(f"{FLASK_API_URL}/line_details")

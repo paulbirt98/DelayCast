@@ -1,7 +1,7 @@
 from web_app.config import WEATHER_ICON_DIR, WEBAPP_DB, FLASK_API_URL
 from web_app.database.db_utils.init_db import Station, HourlyForecast
 
-#for serving directly via app.py
+#for use directly 
 WIND = 'wind.svg'
 THERMOMETER = 'thermometer.svg'
 COLD = 'thermometer-colder.svg'
@@ -51,11 +51,3 @@ WEATHER_ICON_MAP = {
     96: THUNDERSTORM,
     99: THUNDERSTORM
 }
-
-#helper functions for serving icons
-def add_weather_icons(station_data):
-    """
-    
-    """
-    #get station code to call flask api with
-    station_code = station_data
