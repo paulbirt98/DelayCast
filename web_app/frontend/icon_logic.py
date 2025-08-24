@@ -2,15 +2,13 @@ from web_app.config import WEATHER_ICON_DIR, WEBAPP_DB, FLASK_API_URL
 from web_app.database.db_utils.init_db import Station, HourlyForecast
 
 #for use directly 
-WIND = 'wind.svg'
+WIND = {'file': 'wind.svg', 'description': 'windy'}
 THERMOMETER = 'thermometer.svg'
 COLD = 'thermometer-colder.svg'
 HOT = 'thermometer-warmer.svg'
-HIGH_PRESSURE = 'pressure-high-alt.svg'
-LOW_PRESSURE = 'pressure-low-alt.svg'
 
 #for use in map
-PARTLY_CLOUDY = {'day': 'partly-cloudy-day.svg', 'night': 'partly-cloudy-night.svg'}
+PARTLY_CLOUDY = {'day': 'partly-cloudy-day.svg'}
 FOG = {'day': 'fog.svg', 'night': 'fog.svg'}
 DRIZZLE = {'day': 'drizzle.svg', 'night': 'drizzle.svg'}
 SLEET = {'day': 'sleet.svg', 'night': 'sleet.svg'}
@@ -50,4 +48,35 @@ WEATHER_ICON_MAP = {
     95: THUNDERSTORM,
     96: THUNDERSTORM,
     99: THUNDERSTORM
+}
+
+WEATHER_DESCRIPTION_MAP = {
+    0: 'Clear',
+    1: 'Mostly Sunny',
+    2: 'Partly Cloudy',
+    3: 'Overcast',
+    45: 'Fog',
+    48: 'Fog',
+    51: 'Light Drizzle',
+    53: 'Drizzle',
+    55: 'Dense Drizzle',
+    56: 'Light Freezing Drizzle',
+    57: 'Freezing Drizzle',
+    61: 'Light Rain',
+    63: 'Rain',
+    65: 'Heavy Rain',
+    66: 'Light Freezing Rain',
+    67: 'Freezing Rain',
+    71: 'Light Snow',
+    73: 'Snow',
+    75: 'Heavy Snow',
+    77: 'Snow',
+    80: 'Light Showere',
+    81: 'Showers',
+    82: 'Heavy Showers',
+    85: 'Light Snow Showers',
+    86: 'Heavy Snow Showers',
+    95: 'Thunderstorm',
+    96: 'Thunderstorm',
+    99: 'Thunderstorm',
 }

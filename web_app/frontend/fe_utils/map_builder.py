@@ -36,7 +36,7 @@ def build_map(station_data, lines_geojson, centre=(-3.0, 54.5), zoom=5.8, line_w
         get_width=line_widths,
         get_color='colour',
         width_min_pixels=5,
-        pickable=True,
+        pickable=False,
         opacity=0.9,
     )
 

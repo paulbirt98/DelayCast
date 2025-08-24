@@ -13,7 +13,7 @@ from pipeline_utils.tvt_helpers import report_logloss_skill, report_brier, expec
 
 if __name__ == '__main__':
     
-    route = 'glq_inv'
+    route = 'btn_bdm'
     # --- Load data ---
     train = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv')
     val = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_validation_data.csv')

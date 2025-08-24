@@ -99,7 +99,7 @@ def line_details():
 
     return jsonify(geojson)
 
-@app.route('/get_location_forecast')
+@app.route('/location_forecast')
 def get_location_forecast():
 
     #get todays date
@@ -108,7 +108,6 @@ def get_location_forecast():
     station_code = request.args.get('station_code', '').upper()
 
     if not station_code:
-        session.close()
         return jsonify({'Error': 'No location provided in request'}), 400
 
     #query db for the requested station info

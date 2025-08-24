@@ -26,6 +26,11 @@ WEBAPP_DB = PROJECT_ROOT / 'web_app' / 'database' / 'web_app.db'
 #length of forecast(days)
 FORECAST_LENGTH = 5 
 
+#weather icon boundaries
+WINDY = 50
+HOT = 25
+COLD = 0
+
 WANTED_ELRS = {
     'gwr': {
         "lines": ['MLN1','MLN2','MLN3','MLN4','BHL','SWY','CCL','WEY'],
