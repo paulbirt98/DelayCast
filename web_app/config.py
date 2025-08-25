@@ -49,3 +49,5 @@ WANTED_ELRS = {
         "colour": [255, 0, 0]
     }
 }
+
+MODELS_DIR = PROJECT_ROOT / 'web_app' / 'models'

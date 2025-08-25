@@ -103,9 +103,63 @@ try:
     
     with current_delay_risk_col:
         st.markdown(
-            "<h2 style='text-align: center; font-weight: 600;'>Current Delay Risk</h3>",
+            "<h2 style='text-align: center; font-weight: 600;'>Current Delay Risk (>5mins)</h3>",
             unsafe_allow_html=True
         )
+
+        try:
+            resp = requests.get(
+                f"{FLASK_API_URL}/delay_risk_glq_inv",
+                params={"station_code": station_code}
+            )
+            resp.raise_for_status()
+            risk_forecast = resp.json()
+            hourly_risk = risk_forecast.get('hourly_risk', [])
+        except Exception:
+            print('Error: Problem fetching risk forecast from Flask')
+            hourly_risk = []
+
+        #get current risk to dispaly
+        current_risk = hourly_risk[0]['probs']
+
+        # fixed display order
+        classes = ["No Delay", "Minor Delay", "Moderate Delay", "Severe Delay"]
+
+        current_overall = float(
+            current_risk.get(classes[1], 0.0) + 
+            current_risk.get(classes[2], 0.0) + 
+            current_risk.get(classes[3], 0.0)
+            ) * 100
+
+        #dispaly overall delay risk as headline
+        st.markdown(
+                f"""
+                <div style="
+                    font-size: 80px;
+                    font-weight: bold;
+                    text-align: center;
+                    padding: 20px;
+                    border-radius: 15px;
+                ">
+                    {f"{current_overall:.0f}%"}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        
+        #disaply subclasses below
+        current_moderate = float(current_risk.get(classes[2], 0.0)) * 100
+        current_severe = float(current_risk.get(classes[3], 0.0)) * 100
+
+        st.markdown(
+                f"""
+                <div style="text-align:center; line-height:1.7; padding-bottom:20px">
+                    <div>Moderate Delay (>15 mins): <b>{f"{current_moderate:.0f}%"}</b></div>
+                    <div>Severe Delay (>30 mins): <b>{f"{current_severe:.0f}%"}</b></div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 except requests.exceptions.HTTPError as e:
     st.error(f'Error fetching station info: {e}')

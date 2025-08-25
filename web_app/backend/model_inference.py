@@ -10,9 +10,9 @@ class DelayRiskModel:
         Load the calibrated model along with featuers and class labels
         """
         model_dir = Path(model_dir)
-        self.model = joblib.load(model_dir / "model.joblib")
-        self.feature_cols = json.loads((model_dir / "feature_cols.json").read_text())
-        self.classes = json.loads((model_dir / "classes.json").read_text())
+        self.model = joblib.load(model_dir / "glq_inv_model.joblib")
+        self.feature_cols = json.loads((model_dir / "feature_columns.json").read_text())
+        self.classes = json.loads((model_dir / "class_labels.json").read_text())
 
     def _featurize(self, row: dict) -> pd.DataFrame:
         """

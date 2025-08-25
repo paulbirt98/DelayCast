@@ -1,7 +1,7 @@
 from flask import Flask, request, send_from_directory
 import os
 from dotenv import load_dotenv
-from flask import jsonify
+from flask import jsonify, request
 from web_app.config import METADATA_DIR, NF_CORE, WANTED_ELRS, WEBAPP_DB, FORECAST_LENGTH
 import json
 import pandas as pd
@@ -12,7 +12,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, func
 from datetime import date, datetime, timedelta
 from web_app.backend.flask_helpers import get_most_recent_forecast
-
+from web_app.backend.model_inference import DelayRiskModel
+from web_app.config import MODELS_DIR
 
 app = Flask(__name__)
 
@@ -165,9 +166,81 @@ def get_location_forecast():
 
     return jsonify(forecast_object)
     
-    
+GLQ_DELAY_MODEL = DelayRiskModel(MODELS_DIR / 'glq_inv')
 
+@app.route('/delay_risk_glq_inv')
+def get_delay_risk_glq_inv():
+
+    #get station code
+    station_code = request.args.get('station_code').upper()
+    if not station_code:
+        return jsonify({"Error": "No Station Code given"}), 400
     
+    session = Session()
+
+    try:
+        station = session.query(Station).filter_by(station_code=station_code).first()
+        if not station:
+            return jsonify({"error": f"Station {station_code} not found"}), 404
+
+        #get most recetn forecast time
+        now_utc = datetime.now()
+        most_recent = get_most_recent_forecast(session, station, now_utc)
+        if not most_recent:
+            return jsonify({"error": f"No recent forecast for {station_code}"}), 404
+        
+        #get last hour of forecast period
+        forecast_limit = most_recent + timedelta(days=5)
+        
+        #fetch the whole forecast
+        entire_forecast = (
+            session.query(HourlyForecast)
+                .filter(
+                    HourlyForecast.station_id == station.station_id,
+                    HourlyForecast.timestamp_utc >= most_recent,
+                    HourlyForecast.timestamp_utc <= forecast_limit
+                )
+                .order_by(HourlyForecast.timestamp_utc.asc())
+                .all()
+        )
+
+
+        #build object to return - loop through each hour
+        hourly_risk = []
+        for hour in entire_forecast:
+            timestamp = hour.timestamp_utc
+
+            feat = {
+                # create a feature row
+                "station_code": station.station_code,
+                "temp_2m": float(hour.temp_2m),
+                "relative_humidity": float(hour.relative_humidity),
+                "rain": float(hour.rain),
+                "gusts": float(hour.gusts),
+                "snow_depth": float(hour.snow_depth),
+                "surface_pressure": float(hour.surface_pressure),
+                "weekday": int(timestamp.weekday()),
+                "month": int(timestamp.month),
+                "hour": int(timestamp.hour),
+            }
+
+            #calculate risk and create an object of timestamp and risk
+            probs = GLQ_DELAY_MODEL.predict_proba(feat)  
+            hourly_risk.append({
+                "timestamp_utc": timestamp,
+                "probs": probs
+            })
+        
+        if not hourly_risk:
+            return jsonify({'Error': 'No risk forecast found in this range'}), 404
+
+
+        return jsonify({
+            "station_code": station_code,
+            "hourly_risk": hourly_risk
+        })
+    finally:
+        session.close()
 
 
 if __name__ == '__main__':
