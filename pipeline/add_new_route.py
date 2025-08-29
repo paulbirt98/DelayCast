@@ -8,7 +8,21 @@ from pipeline_utils.api_helpers import fetch_rids, fetch_train_times
 #Parse in args for route beginning and end, toc, and testing boolean from the command line
 def parse_cl_arguments():
     """
-    
+        parses command-line arguments so they are accessible within the add_new_route script
+
+        Args:
+        - read from command line
+
+        Command-line Arguments:
+        - --from_location (str): the origin station code.
+        - --to_location (str): the destination station code.
+        - --toc (str): the train operating company (TOC) code.
+        - --testing (flag): optional boolean flag to indicate testing mode; default is False.
+        - --avoid (str): optional. if a station code is passed in here then all services which include that station will be
+        excluded; default is None.
+
+        Returns:
+        - parser.parse_args(): the parsed arguments accessible as attributes.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--from_location", type=str, required=True)

@@ -8,7 +8,7 @@ COLD = 'thermometer-colder.svg'
 HOT = 'thermometer-warmer.svg'
 
 #for use in map
-PARTLY_CLOUDY = {'day': 'partly-cloudy-day.svg'}
+PARTLY_CLOUDY = {'day': 'partly-cloudy-day.svg', 'night': 'partly-cloudy-night.svg'}
 FOG = {'day': 'fog.svg', 'night': 'fog.svg'}
 DRIZZLE = {'day': 'drizzle.svg', 'night': 'drizzle.svg'}
 SLEET = {'day': 'sleet.svg', 'night': 'sleet.svg'}
@@ -71,7 +71,7 @@ WEATHER_DESCRIPTION_MAP = {
     73: 'Snow',
     75: 'Heavy Snow',
     77: 'Snow',
-    80: 'Light Showere',
+    80: 'Light Showers',
     81: 'Showers',
     82: 'Heavy Showers',
     85: 'Light Snow Showers',

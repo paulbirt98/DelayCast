@@ -7,6 +7,21 @@ from pipeline_utils.config import (
 from pipeline_utils.preproccesing_helpers import concat_stoppings_dfs
 
 def parse_cl_arguments():
+    """
+        parses command-line arguments so they are accessible within the add_new_route script
+
+        Args:
+        - read from command line
+
+        Command-line Arguments:
+        - --startpoint(str): one end of the route to be joined together - this will form the first three letters in the resulting route identifier
+        (e.g. the glq in 'glq_inv').
+        - --endpoint(str): the other end of the route to be joined together - this will form the last three letters in the resulting route identifier
+        (e.g. the inv in 'glq_inv').
+
+        Returns:
+        - parser.parse_args(): the parsed arguments accessible as attributes.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--startpoint", type=str, default=True)
     parser.add_argument("--endpoint", type=str, required=True)

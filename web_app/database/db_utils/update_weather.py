@@ -33,7 +33,7 @@ params = {
 	"latitude": [latitude for latitude, _ in coords],
 	"longitude": [longitude for _, longitude in coords],
 	"hourly": ["temperature_2m", "relative_humidity_2m", "rain", "snow_depth", "surface_pressure", "wind_gusts_10m", "is_day", "weather_code"],
-	"forecast_hours": 1,
+	"past_days": 1,
 }
 responses = openmeteo.weather_api(url, params=params)
 

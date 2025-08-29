@@ -1,19 +1,21 @@
 import pandas as pd
 from pipeline_utils.config import (
     INDIVIDUAL_ROUTES,
-    UNIFIED_ROUTES_DIR,
-    UNIFIED_ROUTES_FILE,
-    ROUTE_VALIDATION,
-    ROUTE_TESTING,
-    ALL_TRAINING,
-    ALL_VALIDATION,
-    ALL_TESTING,
     TRAINING_RATIO,
     VALIDATION_RATIO,
+    NO_DELAY_UPPER_BOUNDARY,
+    MINOR_DELAY_UPPER_BOUNDARY,
+    MODERATE_DELAY_UPPER_BOUNDARY,
 )
 
 def tvt_split(route):
     """
+    Spltis the given route's full dataset into training, validation and testing subsets based on TRAINING_RATIO and
+    VALIDATION_RATIO as set in pipeline_utils.config.py. The resulting sets are saved within the routes directory within the 
+    INDIVIDUAL ROUTES directory.
+
+    Args:
+    - route (str): the route to be split, in the format 'glq_inv'
     """
     #assign and create file and directory paths accordingly
     route_directory = INDIVIDUAL_ROUTES / route
@@ -102,25 +104,40 @@ def sample_for_training(route, training_df, low_temperature, high_temperature, h
 
 def threeclass_delay_classification(delay_minutes):
     """
+    Calculates delays as either 'No Delay', 'Minor Delay' or 'Major Delay' given the delay_minutes.
+
+    Args:
+    - delay_minutes (int): the number of minutes a train was delayed by
+
+    Returns:
+    - If delay_minutes is NA, 'Issue Classifying'. If delay_minutes less than NO_DELAY_UPPER_BOUNDARY, 'No Delay'. If
+    delay_minutes less than MINOR_DELAY_UPPER_BOUNDARY, 'Minor Delay. If delay_minutes greater than 15, 'Major Delay.
     
     """
     if pd.isna(delay_minutes):
         return "Issue Classifying"
-    elif delay_minutes < 5:
+    elif delay_minutes < NO_DELAY_UPPER_BOUNDARY:
         return "No Delay"
-    elif 5 <= delay_minutes < 15:
+    elif NO_DELAY_UPPER_BOUNDARY <= delay_minutes < MINOR_DELAY_UPPER_BOUNDARY:
         return "Minor Delay"
     elif 15 <= delay_minutes:
         return "Major Delay"
     
 def binary_delay_classification(delay_minutes):
     """
-    
+    Calculates delays as either 'No Delay' or 'Delay' given the delay_minutes.
+
+    Args:
+    - delay_minutes (int): the number of minutes a train was delayed by.
+
+    Returns:
+    - If delay_minutes is NA, 'Issue Classifying'. If delay_minutes less than NO_DELAY_UPPER_BOUNDARY, 'No Delay'. If
+    delay_minutes greater than NO_DELAY_UPPER_BOUNDARY, 'Delay'.
     """
     if pd.isna(delay_minutes):
         return "Issue Classifying"
-    elif delay_minutes < 5:
+    elif delay_minutes < NO_DELAY_UPPER_BOUNDARY:
         return "No Delay"
-    elif 5 <= delay_minutes:
+    elif NO_DELAY_UPPER_BOUNDARY <= delay_minutes:
         return "Delay"
     

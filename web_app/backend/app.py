@@ -10,7 +10,7 @@ from shapely.geometry import LineString
 from web_app.database.db_utils.init_db import Station, Route, RouteStation, HourlyForecast
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from web_app.backend.flask_helpers import get_most_recent_forecast
 from web_app.backend.model_inference import DelayRiskModel
 from web_app.config import MODELS_DIR
@@ -184,8 +184,10 @@ def get_delay_risk_glq_inv():
             return jsonify({"error": f"Station {station_code} not found"}), 404
 
         #get most recetn forecast time
-        now_utc = datetime.now()
-        most_recent = get_most_recent_forecast(session, station, now_utc)
+        now = datetime.now()
+
+        #get most recetn forecast time
+        most_recent = get_most_recent_forecast(session, station, now)
         if not most_recent:
             return jsonify({"error": f"No recent forecast for {station_code}"}), 404
         
@@ -209,8 +211,9 @@ def get_delay_risk_glq_inv():
         hourly_risk = []
         for hour in entire_forecast:
             timestamp = hour.timestamp_utc
+            timestamp_str = timestamp.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
 
-            feat = {
+            features = {
                 # create a feature row
                 "station_code": station.station_code,
                 "temp_2m": float(hour.temp_2m),
@@ -225,9 +228,10 @@ def get_delay_risk_glq_inv():
             }
 
             #calculate risk and create an object of timestamp and risk
-            probs = GLQ_DELAY_MODEL.predict_proba(feat)  
+            probs = GLQ_DELAY_MODEL.predict_proba(features)  
             hourly_risk.append({
-                "timestamp_utc": timestamp,
+                "timestamp_utc": timestamp_str,
+                "features": features,
                 "probs": probs
             })
         

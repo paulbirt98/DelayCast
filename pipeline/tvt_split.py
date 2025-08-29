@@ -15,7 +15,16 @@ import argparse
 
 def argparse_cl_arguments():
     """
-    
+        parses command-line arguments so they are accessible within the add_new_route script
+
+        Args:
+        - read from command line
+
+        Command-line Arguments:
+        - --route(str): the route identifier in format 'glq_inv.
+
+        Returns:
+        - parser.parse_args(): the parsed arguments accessible as attributes.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--route", type=str, default=None)

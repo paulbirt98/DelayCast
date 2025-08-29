@@ -22,7 +22,17 @@ from pipeline_utils.preproccesing_helpers import (
 
 def parse_cl_arguments():
     """
-    
+        parses command-line arguments so they are accessible within the add_new_route script
+
+        Args:
+        - read from command line
+
+        Command-line Arguments:
+        - --from_location(str): the origin station of the raw dataset to be processed
+        - --to_location(Str): the terminus station of teh raw dataset to be processed
+
+        Returns:
+        - parser.parse_args(): the parsed arguments accessible as attributes.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--from_location", type=str, required=True)

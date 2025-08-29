@@ -5,14 +5,23 @@ from sklearn.metrics import log_loss, brier_score_loss
 
 def report_logloss_skill(test_labels, predicted_probabilities, class_labels, training_labels):
     """
-    Prints the model's log loss and skill scores against train climatology and uniform.
-    Also prints context stats H(y_test) and ln(K).
+    Prints the model's log loss and skill scores against training climatology and uniform.
+    Also prints context stats , test set distribution and the unform forecaster log loss.
 
     Args:
         test_labels   : iterable of true class labels on the TEST set (strings)
         predicted_probabilities : (N x K) array of predicted probabilities, columns align to class_labels
         class_labels    : list of class names in the same order as predicted_proba columns
         training_labels  : iterable of TRAIN labels (used to build climatology baseline)
+
+    Returns:
+    - results (dict): a dictionary containing:
+        - "logloss" (float): model log loss on the test set
+        - "test_entropy" (float): test entripy computed from empirical class proportions
+        - "uniform_log_loss" (float): ln(K), the log loss of a uniform predictor
+        - "skill_vs_train" (float): 1 - model_logloss / baseline_logloss (climatology skill)
+        - "skill_vs_uniform" (float): 1 - model_logloss / uniform_log_loss (uniform skill)
+        - "train_priors" (ndarray): length-K array of training-set class proportions
 
     """
     num_classes = len(class_labels)
@@ -68,7 +77,16 @@ def report_logloss_skill(test_labels, predicted_probabilities, class_labels, tra
 
 def report_brier(training_labels, class_labels, predicted_probabilities, testing_target_encoded, testing_target_binarized):
     """
+    computes and prints multiclass brier scores: overall (global) brier score,
+    a training climatology baseline brier, and brier skill score. also prints per-class
+    brier scores and per-class brier skill.
 
+    Args:
+    - training_labels (list): training-set class labels
+    - class_labels (list[str]): ordered class names corresponding to probability columns
+    - predicted_probabilities (array): array with model-predicted class probabilities
+    - testing_target_encoded (array[int]): array of encoded class indices
+    - testing_target_binarized (array[int]): one-hot matrix of shape for test labels
     """
     train_counts = Counter(training_labels.values)
     train_priors = np.array([train_counts.get(lbl, 0) / len(training_labels) for lbl in class_labels], float)
@@ -94,37 +112,49 @@ def report_brier(training_labels, class_labels, predicted_probabilities, testing
         print(f"{label}: {brier_per_class:.4f} (skill={brier_per_class_skill:.3f})")
 
 def expected_calibration_error(testing_target_encoded, predicted_probabilities, n_bins=10, strategy="uniform"):
-        """
-        
-        """
-        n_classes = predicted_probabilities.shape[1]
-        ece_list = []
+    """
+    computes class-wise expected calibration error (ECE).
 
-        for c in range(n_classes):
-            true_class = (testing_target_encoded == c).astype(int)
-            prob_class = predicted_probabilities[:, c]
+    Args:
+    - testing_target_encoded (array[int]): array of encoded class indices
+    - predicted_probabilities (array[float]): array with predicted class probabilities
+    - n_bins (int): number of calibration bins; default is 10
+    - strategy (str): binning strategy, "uniform" for equal-width bins in [0,1] or
+    "quantile" for equal-mass bins based on predicted probabilities; default "uniform"
 
-            if strategy == "quantile":
-                edges = np.quantile(prob_class, np.linspace(0, 1, n_bins+1))
-                edges = np.unique(edges) # remove duplicates
-                if len(edges) <= 2:                            
-                    ece_list.append(0.0); continue
-            else:
-                edges = np.linspace(0, 1, n_bins+1)
+    Returns:
+    - ece_list (list[float]): list of per-class ECE values; 0.0 indicates perfect calibration
+    for that class.
+    """
 
-            ece = 0.0
-            num_samples = len(prob_class)
-            for i in range(len(edges)-1):
-                low, high = edges[i], edges[i+1]
-                
-                mask = (prob_class >= low) & (prob_class < high if i < len(edges)-2 else prob_class <= high)
-                if not np.any(mask):
-                    continue
-                mean_probability = prob_class[mask].mean()
-                actual  = true_class[mask].mean()
-                ece += (mask.sum()/num_samples) * abs(mean_probability - actual)
-            ece_list.append(ece)
-        return ece_list
+    n_classes = predicted_probabilities.shape[1]
+    ece_list = []
+
+    for c in range(n_classes):
+        true_class = (testing_target_encoded == c).astype(int)
+        prob_class = predicted_probabilities[:, c]
+
+        if strategy == "quantile":
+            edges = np.quantile(prob_class, np.linspace(0, 1, n_bins+1))
+            edges = np.unique(edges) # remove duplicates
+            if len(edges) <= 2:                            
+                ece_list.append(0.0); continue
+        else:
+            edges = np.linspace(0, 1, n_bins+1)
+
+        ece = 0.0
+        num_samples = len(prob_class)
+        for i in range(len(edges)-1):
+            low, high = edges[i], edges[i+1]
+            
+            mask = (prob_class >= low) & (prob_class < high if i < len(edges)-2 else prob_class <= high)
+            if not np.any(mask):
+                continue
+            mean_probability = prob_class[mask].mean()
+            actual  = true_class[mask].mean()
+            ece += (mask.sum()/num_samples) * abs(mean_probability - actual)
+        ece_list.append(ece)
+    return ece_list
 
 def per_bin_calibration(testing_target_encoded, predicted_probabilities, n_bins=10, strategy="uniform"):
         """

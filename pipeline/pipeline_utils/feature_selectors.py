@@ -13,6 +13,10 @@ from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 
 def multicoll_heatmap(stoppings_df):
     """
+    Produces a correlation matrix for the given NUMERICAL_FEATURES.
+
+    Args:
+    - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
     
     """
     features = stoppings_df[NUMERICAL_FEATURES].dropna() # just in case any unexpected nulls
@@ -37,9 +41,11 @@ def run_anova_f(stoppings_df, numerical_features, target):
 
     Args:
     - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
+    - numerical_features (list): a list containing the names of each numerical features as found in the stoppings_df dataframe
+    - target (str): the name of the target variable as found in the stoppings_df dataframe
 
     Returns:
-    - 
+    - anova_f_results (dataframe): The Anova F test results for each feature
     """
     #define features and target
     features = stoppings_df[numerical_features]
@@ -67,7 +73,14 @@ def run_anova_f(stoppings_df, numerical_features, target):
 
 def run_chi_squared(stoppings_df, categorical_features):
     """
-    
+    Runs Chi Squared tests on all categorical features for the given database.
+
+    Args:
+    - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
+    - categorical_features (list): a list containing the names of each categorical features as found in the stoppings_df dataframe
+
+    Returns:
+    - chi2_results (dataframe): The Chi Squared test results for each feature
     """
     #encode categorical features
     x = stoppings_df[categorical_features].copy()
@@ -90,7 +103,15 @@ def run_chi_squared(stoppings_df, categorical_features):
 
 def run_mutual_info(stoppings_df, numerical_features, categorical_features):
     """
-    
+    Runs Mutual Information tests on all features for the given database.
+
+    Args:
+    - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
+    - numerical_features (list): a list containing the names of each numerical features as found in the stoppings_df dataframe
+    - categorical_features (list): a list containing the names of each categorical features as found in the stoppings_df dataframe
+
+    Returns:
+    - mutual_info_results (dataframe): The Mutual Information test results for each feature
     """
     #define numerical features
     numerical_df = stoppings_df[numerical_features]

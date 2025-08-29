@@ -70,6 +70,8 @@ def fetch_rids(from_location, to_location, atoc, from_date, to_date, testing=Fal
     - to_location (str): The terminus station CRS code
     - from_date (datetime): The first date in the desired date range 
     - to_date (datetime): The last date in the desired date range
+    - testing (boolean): optional, defautled to False. If set to positive only the most recent 3 days worth of data will be fetched - for
+    testing pusposes to view structure and validity of response.
 
     Returns:
     - rid_records_df (dataframe): A dataframe of all RIDs fetched for all trains fitting the API request parameters within the given date range.

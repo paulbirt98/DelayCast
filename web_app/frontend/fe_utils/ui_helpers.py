@@ -1,7 +1,11 @@
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
+from zoneinfo import ZoneInfo
 import requests
 from web_app.config import FLASK_API_URL,WINDY
 from web_app.frontend.icon_logic import WEATHER_ICON_MAP, WEATHER_ICON_DIR, WIND, WEATHER_DESCRIPTION_MAP
 import base64
+import streamlit as st
 
 def map_name_to_details(station_data):
     """
@@ -79,4 +83,96 @@ def add_latest_weather(station_data):
             pass
 
     return station_data
+
+def station_weather_risk_forecast(station_code):
+    """
+    Fetches all data to be used on the statino info page - the hourly weather and hourly risk forecasts for the next 5 days, 6am to 11pm.
+
+    Args:
+    - station_code (str): the three letter station code for which data is to be fetched and computed
+
+    Returns:
+    - 
+    """
+    #get station info from flask
+    try:
+        station_info_res = requests.get(f"{FLASK_API_URL}/station_info", params={"station_code": station_code})
+        station_info_res.raise_for_status()
+        station_info = station_info_res.json()
+    except Exception:
+        print('Error: Problem fetching station info from Flask')
+        hourly_risk = {}
+
+    #get weather forecast
+    try:
+        weather_res = requests.get(f"{FLASK_API_URL}/location_forecast", params={"station_code": station_code})
+        weather_res.raise_for_status()
+        forecast_data = weather_res.json()
+    except Exception:
+        print('Error: Problem fetching weather forecast from Flask')
+        hourly_risk = []
+
+    #get risk forecast
+    try:
+        risk_res = requests.get(f"{FLASK_API_URL}/delay_risk_glq_inv", params={"station_code": station_code})
+        risk_res.raise_for_status()
+        risk_data = risk_res.json()
+        hourly_risk = risk_data.get("hourly_risk", [])
+    except Exception:
+        print('Error: Problem fetching risk forecast from Flask')
+        hourly_risk = []
+
+    #get the next 5 days as dates (including today)
+    tz = ZoneInfo("Europe/London")
+    today = datetime.now(tz).date()
+    timeframe = [today + timedelta(days=i) for i in range(5)]
+    forecast_days = {day.isoformat(): [] for day in timeframe}
+
+    #get the risk for hours within the window 6am - 11pm
+    for hour in hourly_risk:                     
+        timestamp = hour["timestamp_utc"]
+        timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        if 6 <= timestamp.hour <= 23:
+            date_key = timestamp.date().isoformat()
+            if date_key in forecast_days:   
+                forecast_days[date_key].append({"timestamp_utc": timestamp, "weather": hour["features"], "probs": hour["probs"]})
+        
+
+    for date_key in forecast_days:
+        forecast_days[date_key].sort(key=lambda x: x['timestamp_utc'])
+
+    days = sorted(forecast_days.keys())[:5]
+
+    #get current conditions
+    current_conditions = forecast_data["hourly_forecasts"][0]
+    weather_code = int(current_conditions.get("weather_code", 0))
+    is_day = bool(current_conditions.get("is_day", 1))
+    gusts = float(current_conditions.get("gusts", 0.0))
+    icon = determine_icon(weather_code, is_day, gusts)
+    description = determine_description(weather_code, gusts)
+
+    return {
+        "station_info": station_info,
+        "forecast_data": forecast_data,
+        "hourly_risk": hourly_risk,
+        "forecast_by_day": forecast_days,
+        "days": days,
+        "current_conditions": current_conditions,
+        "icon": icon,
+        "description": description,
+    }
+
+
+def _ensure_bundle(station_code):
+    """
+    Loads data once per station per session.
+    """
+    if ("bundle" not in st.session_state) or (st.session_state.get("bundle_station") != station_code):
+        st.session_state["bundle"] = station_weather_risk_forecast(station_code)
+        st.session_state["bundle_station"] = station_code
+    return st.session_state["bundle"]
+
+
+def _clamp(x, lo, hi):
+    return max(lo, min(hi, x))
 

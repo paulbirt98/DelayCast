@@ -172,7 +172,15 @@ def to_long_format(journeys_df, from_location, to_location):
 
 def get_first_and_terminus(stoppings_df):
     """
-    
+    Adds two new columns to the passed dataframe, 'is_first_station' and 'is_terminus'. If a stopping is the first of a given service (RID)
+    is_first_station is set to 1, otherwise 0. If a stopping is the last of a given service, 'is_terminus' is set to 1, otherwise 0.
+
+    Args:
+    - stoppings_df (dataframe): a long format dataframe where each row is a record of a train stopping at a station
+
+    Returns:
+    - stoppings_df (dataframe): the same dataframe passed in as an argument but with the newly created and filled 'is_first_station' and 'is_terminus'
+    columns.
     """
     # Sort by rid and scheduled time (or actual time if preferred)
     stoppings_df = stoppings_df.sort_values(by=["rid", "scheduled_time"])
