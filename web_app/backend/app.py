@@ -3,9 +3,7 @@ import os
 from dotenv import load_dotenv
 from flask import jsonify, request
 from web_app.config import (
-    GLQ_BG_DF, GLQ_DELAY_MODEL, EUS_DELAY_MODEL, EUS_BG_DF, PAD_BG_DF,
-     PAD_DELAY_MODEL, BTN_DELAY_MODEL, BTN_BG_DF, NF_CORE, WANTED_ELRS, WEBAPP_DB, FORECAST_LENGTH, 
-     select_model, select_bg_df
+     NF_CORE, WANTED_ELRS, WEBAPP_DB, FORECAST_LENGTH, get_model_for_station, get_bg_df_for_station
     )
 import pandas as pd
 import geopandas as gpd
@@ -209,11 +207,11 @@ def get_delay_risk():
         )
 
         #get relevant model and background df
-        model = select_model(station_code)
-        bg_df = select_bg_df(station_code)
+        model = get_model_for_station(station_code)
+        bg_df = get_bg_df_for_station(station_code)
 
         #get referenc values
-        ref_values = get_station_reference_values(bg_df, station_code, station_code)
+        ref_values = get_station_reference_values(bg_df, station_code, model)
 
         # features to explain (exclude station_code)
         feature_list = [
@@ -246,8 +244,6 @@ def get_delay_risk():
 
             #get baseline risk
             baseline_risk = get_overall_delay(probs)
-
-            #skip for non-disruptive weather
 
 
             # top drivers via OAT (Δpp)

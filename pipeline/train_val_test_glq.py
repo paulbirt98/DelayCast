@@ -1,6 +1,7 @@
 import json
 import joblib
 import pandas as pd
+from sklearn.frozen import FrozenEstimator
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import log_loss, brier_score_loss
 from sklearn.ensemble import RandomForestClassifier
@@ -57,7 +58,7 @@ if __name__ == '__main__':
     base_clf.fit(training_features, training_target)
 
     #Calibrate using validation set
-    calibrator = CalibratedClassifierCV(estimator=base_clf, method='isotonic', cv='prefit')
+    calibrator = CalibratedClassifierCV(estimator=FrozenEstimator(base_clf), method="isotonic")
     calibrator.fit(val_features, val_target)
 
     #Evaluate on test set
@@ -155,7 +156,7 @@ if __name__ == '__main__':
     model_save_path = model_dir / 'glq_inv_model'
 
     #save model to file
-    joblib.dump(calibrator, model_dir / 'glq_inv_model.joblib')
+    joblib.dump(calibrator, model_dir / 'glq_inv_model.joblib', compress=0)
 
     #features
     feature_columns = list(training_features.columns)

@@ -10,7 +10,10 @@ class DelayRiskModel:
         """
         model_dir = Path(model_dir)
         route_name = model_dir.name 
-        self.model = joblib.load(model_dir / f"{route_name}_model.joblib")
+        model_filepath = model_dir / f"{route_name}_model.joblib"
+
+
+        self.model = joblib.load(model_filepath, mmap_mode='r')
         self.feature_cols = json.loads((model_dir / "feature_columns.json").read_text())
         self.classes = json.loads((model_dir / "class_labels.json").read_text())
 

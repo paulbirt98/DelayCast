@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 import os
 from dotenv import load_dotenv
@@ -65,63 +66,56 @@ STATIONS_BY_ROUTE = {
 
 MODELS_DIR = PROJECT_ROOT / 'web_app' / 'models'
 
-GLQ_DELAY_MODEL = DelayRiskModel(MODELS_DIR / 'glq_inv')
-BTN_DELAY_MODEL = DelayRiskModel(MODELS_DIR / 'btn_bdm')
-EUS_DELAY_MODEL = DelayRiskModel(MODELS_DIR / 'eus_liv')
-PAD_DELAY_MODEL = DelayRiskModel(MODELS_DIR / 'pad_pnz')
-
-glq_bg_data_route = PROJECT_ROOT / 'data' / 'processed' / 'individual' / 'routes' / 'glq_inv' / 'glq_inv_testing_data.csv'
-GLQ_BG_DF = pd.read_csv(glq_bg_data_route)
-
-btn_bg_data_route = PROJECT_ROOT / 'data' / 'processed' / 'individual' / 'routes' / 'btn_bdm' / 'btn_bdm_testing_data.csv'
-BTN_BG_DF = pd.read_csv(btn_bg_data_route)
-
-eus_bg_data_route = PROJECT_ROOT / 'data' / 'processed' / 'individual' / 'routes' / 'eus_liv' / 'eus_liv_testing_data.csv'
-EUS_BG_DF = pd.read_csv(eus_bg_data_route)
-
-pad_bg_data_route = PROJECT_ROOT / 'data' / 'processed' / 'individual' / 'routes' / 'pad_pnz' / 'pad_pnz_testing_data.csv'
-PAD_BG_DF = pd.read_csv(pad_bg_data_route)
-
 #function to return correct model
-def select_model(station_code):
+def get_route_code(station_code):
     """
-    returns the relevant model given the passed station code
+    returns the relevant route code given the passed station code
 
     args:
     -station_code (str): three letter station code
 
     returns:
-    - the relevant model
+    - the relevant route code
     """
     if station_code.upper() in STATIONS_BY_ROUTE.get('glq_inv'):
-        return GLQ_DELAY_MODEL
+        return 'glq_inv'
     elif station_code.upper() in STATIONS_BY_ROUTE.get('btn_bdm'):
-        return BTN_DELAY_MODEL
+        return 'btn_bdm'
     elif station_code.upper() in STATIONS_BY_ROUTE.get('eus_liv'):
-        return EUS_DELAY_MODEL
+        return 'eus_liv'
     elif station_code.upper() in STATIONS_BY_ROUTE.get('pad_pnz'):
-        return PAD_DELAY_MODEL
+        return 'pad_pnz'
     else:
         raise ValueError(f'No model found for {station_code}')
 
-#function to return route code
-def select_bg_df(station_code):
-    """
-    returns the relevant bacjground dataframe given the passed station code
+#get relevant model per station - ensure only one model cached at a time
+@lru_cache(maxsize=1)
+def get_model_for_route(route_code):
+    return DelayRiskModel(MODELS_DIR / route_code)
 
-    args:
-    -station_code (str): three letter station code
+def get_model_for_station(station_code):
+    route = get_route_code(station_code)
+    return get_model_for_route(route)
+    
 
-    returns:
-    -  the relevant dataframe
-    """
-    if station_code.upper() in STATIONS_BY_ROUTE.get('glq_inv'):
-        return GLQ_BG_DF
-    elif station_code.upper() in STATIONS_BY_ROUTE.get('btn_bdm'):
-        return BTN_BG_DF
-    elif station_code.upper() in STATIONS_BY_ROUTE.get('eus_liv'):
-        return EUS_BG_DF
-    elif station_code.upper() in STATIONS_BY_ROUTE.get('pad_pnz'):
-        return PAD_BG_DF
-    else:
-        raise ValueError(f'No background df found  for {station_code}')
+##get relevant background df - only one cached
+glq_bg_data_route = PROJECT_ROOT / 'data' / 'processed' / 'individual' / 'routes' / 'glq_inv' / 'glq_inv_testing_data.csv'
+btn_bg_data_route = PROJECT_ROOT / 'data' / 'processed' / 'individual' / 'routes' / 'btn_bdm' / 'btn_bdm_testing_data.csv'
+eus_bg_data_route = PROJECT_ROOT / 'data' / 'processed' / 'individual' / 'routes' / 'eus_liv' / 'eus_liv_testing_data.csv'
+pad_bg_data_route = PROJECT_ROOT / 'data' / 'processed' / 'individual' / 'routes' / 'pad_pnz' / 'pad_pnz_testing_data.csv'
+
+BG_PATHS = {
+    "glq_inv": glq_bg_data_route,
+    "btn_bdm": btn_bg_data_route,
+    "eus_liv": eus_bg_data_route,
+    "pad_pnz": pad_bg_data_route,
+}
+
+@lru_cache(maxsize=1)
+def get_bg_df_for_route(route_code):
+    path = BG_PATHS[route_code]
+    return pd.read_csv(path)
+
+def get_bg_df_for_station(station_code):
+    route = get_route_code(station_code)
+    return get_bg_df_for_route(route)
