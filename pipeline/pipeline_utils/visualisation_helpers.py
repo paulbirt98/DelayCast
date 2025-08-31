@@ -31,7 +31,7 @@ def plot_stacked_delay_by_binned_feature(df, feature, bins, labels, target_col='
     percent.plot(kind='bar', stacked=True, figsize=(10, 6), colormap='tab10', edgecolor='black')
     plt.ylabel('Percentage of Delay Classification')
     plt.xlabel(binned_feature.replace('_', ' ').title())
-    plt.title(f'Delay Classification by {binned_feature.replace('_', ' ').title()}')
+    plt.title(f"Delay Classification by {binned_feature.replace('_', ' ').title()}")
     plt.legend(title=target_col, bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.tight_layout()
     plt.grid(axis='y', linestyle='--', linewidth=0.5)

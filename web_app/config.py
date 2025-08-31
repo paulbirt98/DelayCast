@@ -22,8 +22,13 @@ METADATA_DIR = Path(os.getenv("METADATA", METADATA_LOCAL_PATH)).resolve()
 NF_CORE = PROJECT_ROOT / 'web_app' / 'database' / 'nf_core.csv'
 STOPPINGS_DATA = PROJECT_ROOT / 'data' / 'processed' / 'unified_routes' / 'unified_routes.csv'
 
+#static folder
+STATIC_FOLDER = PROJECT_ROOT / 'web_app' / 'frontend' / 'static'
+
 #for serving weather icons
-WEATHER_ICON_DIR = PROJECT_ROOT / 'web_app' / 'frontend' / 'static' / 'weather_icons'
+WEATHER_ICON_DIR = STATIC_FOLDER / 'weather_icons'
+
+TIME_GRAPH_DIR = STATIC_FOLDER / 'time_graphs'
 
 #path for database initialisations
 WEBAPP_DB = PROJECT_ROOT / 'web_app' / 'database' / 'web_app.db'
@@ -124,3 +129,41 @@ def load_baselines(json_path=BASELINES_JSON):
 def get_baseline_for_station(station_code):
     baselines = load_baselines().get(str(station_code).upper())
     return baselines
+
+#design / css constants to reduce clutter on streamlit pages
+TABLE_CSS = """
+        <style>
+        div[data-baseweb="tab-list"] {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        div[data-baseweb="tab"] {
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        div[data-baseweb="tab"]:hover {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+                
+        div[data-baseweb="tab"][aria-selected="true"] {
+            background-color: #004080;
+            color: white;
+            border-radius: 5px;
+        }
+        </style>
+    """
+
+GRAPH_CSS = """
+        <style>
+        .graph-wrap { margin: 10px 0 26px; }
+        .graph-wrap svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+        .graph-title { text-align:center; font-weight:600; margin: 6px 0 2px; }
+        .graph-caption { text-align:center; color:#6b7280; font-size: 13px; margin-top: 2px; }
+        </style>
+    """

@@ -1,11 +1,9 @@
 from email.utils import parsedate_to_datetime
 import pandas as pd
-import requests
 import streamlit as st
-from web_app.frontend.fe_utils.ui_helpers import determine_icon, determine_description, station_weather_risk_forecast, determine_weather_label
-from web_app.config import FLASK_API_URL
+from web_app.frontend.fe_utils.ui_helpers import station_weather_risk_forecast, determine_weather_label, determine_time_graphs
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from web_app.config import TABLE_CSS, GRAPH_CSS
 
 st.set_page_config(layout="wide", page_title="Station Info")
 
@@ -190,35 +188,7 @@ with current_delay_risk_col:
 
     
 #inject styling for the tab layout to centre tabs and space tem out
-st.markdown(
-    """
-        <style>
-        div[data-baseweb="tab-list"] {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-        }
-
-        div[data-baseweb="tab"] {
-            flex: 1;
-            text-align: center;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        div[data-baseweb="tab"]:hover {
-            background-color: #f0f0f0;
-            border-radius: 5px;
-        }
-                
-        div[data-baseweb="tab"][aria-selected="true"] {
-            background-color: #004080;
-            color: white;
-            border-radius: 5px;
-        }
-        </style>
-    """,
-    unsafe_allow_html=True)
+st.markdown(TABLE_CSS, unsafe_allow_html=True)
 
 #delay risk forecast for next 5 days display
 forecast_by_day = all_data.get("forecast_by_day", {}) 
@@ -334,12 +304,39 @@ for tab, day in zip(tabs, days):
         st.data_editor(
             df,
             hide_index=True,
-            use_container_width=True,
+            width='stretch',
             disabled=True,  
             column_config={
                 col: st.column_config.TextColumn(
-                    col,
-                    width='medium'
+                    col
                 ) for col in df.columns
             }
         )
+
+#time graphs
+st.markdown(GRAPH_CSS, unsafe_allow_html=True)
+
+graphs = determine_time_graphs(station_code)
+
+if graphs["hour"]:
+    st.markdown(
+        "<h2 style='text-align: center; font-weight: 600;'>Average Delays by Hour of the Day</h3>",
+        unsafe_allow_html=True
+    )
+    st.markdown(f"<div class='graph-wrap'>{graphs['hour']}</div>", unsafe_allow_html=True)
+
+
+if graphs["day"]:
+    st.markdown(
+        "<h2 style='text-align: center; font-weight: 600;'>Average Delays by Day of the Week</h3>",
+        unsafe_allow_html=True
+    )
+    st.markdown(f"<div class='graph-wrap'>{graphs['day']}</div>", unsafe_allow_html=True)
+
+if graphs["month"]:
+    st.markdown(
+        "<h2 style='text-align: center; font-weight: 600;'>Average Delays by Month of the Year</h3>",
+        unsafe_allow_html=True
+    )
+    st.markdown(f"<div class='graph-wrap'>{graphs['month']}</div>", unsafe_allow_html=True)
+

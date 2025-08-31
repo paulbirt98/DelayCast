@@ -1,12 +1,23 @@
 import pandas as pd
 from pipeline_utils.visualisation_helpers import plot_delay_time_period
 from pipeline_utils.config import INDIVIDUAL_ROUTES
-
-filepath = INDIVIDUAL_ROUTES / 'glq_inv' / 'glq_inv_testing_data.csv'
-
-df = pd.read_csv(filepath)
+from web_app.config import STATIC_FOLDER
 
 time_periods = ['hour', 'day', 'month']
 
-for time_period in time_periods:
-    plot_delay_time_period(df, 'AVM', time_period)
+for directory in INDIVIDUAL_ROUTES.iterdir():
+    for file in directory.iterdir():
+        if file.name.endswith('_testing_data.csv'):
+
+            df = pd.read_csv(file)
+
+            for station in df['station'].dropna().unique():
+
+                for time_period in time_periods:
+                    time_graph_dir = STATIC_FOLDER / 'time_graphs'
+                    time_graph_dir.mkdir(exist_ok=True, parents=True)
+                    filepath = time_graph_dir / f"{station}_{time_period}_graph.svg"
+                    
+                    plot_delay_time_period(df, station, time_period, filepath=filepath)
+
+                    print(f"Time graph for {station} by the {time_period} saved")

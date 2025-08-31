@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from zoneinfo import ZoneInfo
+import pandas as pd
 import requests
-from web_app.config import FLASK_API_URL,WINDY, get_route_code
+from web_app.config import FLASK_API_URL,WINDY, get_route_code, TIME_GRAPH_DIR
 from web_app.frontend.icon_logic import WEATHER_ICON_MAP, WEATHER_ICON_DIR, WIND, WEATHER_DESCRIPTION_MAP
 import base64
-import streamlit as st
+import altair as alt
 
 def map_name_to_details(station_data):
     """
@@ -40,6 +41,24 @@ def determine_icon(weather_code, is_day, gusts):
     icon = "data:image/svg+xml;base64," + base64.b64encode(icon_bytes).decode("ascii")
 
     return icon
+
+def determine_time_graphs(station_code):
+    """
+    determines the file paths to render the time graphs relevant to current station
+    """
+    if station_code:
+        station_code = station_code.upper()
+    else:
+        return {"hour": None, "day": None, "month": None}
+    
+    graphs = {}
+    for time_period in ["hour", "day", "month"]:
+        path = TIME_GRAPH_DIR / f"{station_code}_{time_period}_graph.svg"
+        if path.exists():
+            graphs[time_period] = path.read_text(encoding="utf-8")
+        else:
+            None
+    return graphs
 
 def determine_description(weather_code, gusts):
     """
@@ -180,6 +199,3 @@ def determine_weather_label(raw_name):
         "surface_pressure": "Pressure",
     }
     return ui_labels.get(raw_name)
-
-
-
