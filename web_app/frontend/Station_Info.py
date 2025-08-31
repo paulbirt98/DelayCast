@@ -1,4 +1,5 @@
 from email.utils import parsedate_to_datetime
+import pandas as pd
 import requests
 import streamlit as st
 from web_app.frontend.fe_utils.ui_helpers import determine_icon, determine_description, station_weather_risk_forecast, determine_weather_label
@@ -16,12 +17,19 @@ if not station_code:
     station_code = st.session_state.get('station_code')
     st.query_params['station_code'] = station_code
 
-if ("data" not in st.session_state) or (st.session_state.get("data_station_code") != station_code):
-    all_data = station_weather_risk_forecast(station_code)
-    st.session_state["data"] = all_data
-    st.session_state["data_station_code"] = station_code
-else:
-    all_data = st.session_state["data"]
+#catch cases where station is still none and send home
+try:
+    if ("data" not in st.session_state) or (st.session_state.get("data_station_code") != station_code):
+        all_data = station_weather_risk_forecast(station_code)
+        st.session_state["data"] = all_data
+        st.session_state["data_station_code"] = station_code
+    else:
+        all_data = st.session_state["data"]
+except Exception as e:
+    st.error("Oops! Something went wrong fetching station data. Please return to the home page.")
+    if st.button("Back to Home", type="primary"):
+        st.switch_page("dashboard.py")
+    st.stop()
 
 #home button
 if st.button("Back to Home", type="primary"):
@@ -73,6 +81,7 @@ with current_condition_col:
         current_temp = round(float(current_conditions['temp_2m']))
         current_humidity = round(float(current_conditions['humidity']))
         current_rain = round(current_conditions['rain'], 2)
+        current_gusts = round(current_conditions['gusts'])
         current_pressure = round(current_conditions['surface_pressure'])
         current_snow_depth_cm = round((current_conditions['snow_depth'] * 100), 1)
 
@@ -96,6 +105,7 @@ with current_condition_col:
             <div style="text-align:center; line-height:1.7; padding-bottom:20px">
                 <div>Humidity: <b>{current_humidity}%</b></div>
                 <div>Rain (last hour): <b>{current_rain:.2f} mm</b></div>
+                <div>Gusts: <b>{current_gusts} km/h</b></div>
                 <div>Surface Pressure: <b>{current_pressure} hPa</b></div>
                 <div>Snow Depth: <b>{current_snow_depth_cm} cm</b></div>
             </div>
@@ -246,6 +256,7 @@ for tab, day in zip(tabs, days):
                 "Temperature",
                 "Humidity",
                 "Rain (Previous Hour - mm)",
+                "Gusts (km/h)",
                 "Surface Pressure (hPa)",
                 "Snow Depth",
             ]
@@ -261,6 +272,7 @@ for tab, day in zip(tabs, days):
         temp_row = []
         humidity_row = []
         rain_row = []
+        gusts_row=[]
         pressure_row = []
         snow_row = []
 
@@ -275,6 +287,7 @@ for tab, day in zip(tabs, days):
             temp_row.append(f'{round(weather.get("temp_2m", 0))}')
             humidity_row.append(f'{round(weather.get("relative_humidity", 0))}')
             rain_row.append(f'{weather.get("rain", 0):.2f}')
+            gusts_row.append(f'{(round(weather.get("gusts", 0)))}')
             pressure_row.append(f'{round(weather.get("surface_pressure", 0))}')
             snow_row.append(f'{round(weather.get("snow_depth")*100, 1)}')
 
@@ -306,12 +319,27 @@ for tab, day in zip(tabs, days):
                 temp_row[index],
                 humidity_row[index],
                 rain_row[index],
+                gusts_row[index],
                 pressure_row[index],
                 snow_row[index]
             ]
 
         #config column width to avoid cut offs
-        col_cfg = {h: st.column_config.TextColumn(h, width=220) for h in hour_labels}
+        col_cfg = {h: st.column_config.TextColumn(h, width=0) for h in hour_labels}
 
-        # Display with hours as columns
-        st.dataframe(table, use_container_width=True)
+        #table to dataframe
+        df = pd.DataFrame(table)
+
+        # data_editor but read - only (to allowtwext wrappignw)
+        st.data_editor(
+            df,
+            hide_index=True,
+            use_container_width=True,
+            disabled=True,  
+            column_config={
+                col: st.column_config.TextColumn(
+                    col,
+                    width='medium'
+                ) for col in df.columns
+            }
+        )

@@ -1,4 +1,5 @@
 from functools import lru_cache
+import json
 from pathlib import Path
 import os
 from dotenv import load_dotenv
@@ -111,11 +112,15 @@ BG_PATHS = {
     "pad_pnz": pad_bg_data_route,
 }
 
-@lru_cache(maxsize=1)
-def get_bg_df_for_route(route_code):
-    path = BG_PATHS[route_code]
-    return pd.read_csv(path)
+BASELINES_JSON = PROJECT_ROOT / 'web_app' / 'database' / 'station_baselines.json'
 
-def get_bg_df_for_station(station_code):
-    route = get_route_code(station_code)
-    return get_bg_df_for_route(route)
+@lru_cache(maxsize=1)
+def load_baselines(json_path=BASELINES_JSON):
+    filepath = Path(json_path)
+    if not filepath.exists():
+        return {}
+    return json.loads(filepath.read_text())
+
+def get_baseline_for_station(station_code):
+    baselines = load_baselines().get(str(station_code).upper())
+    return baselines

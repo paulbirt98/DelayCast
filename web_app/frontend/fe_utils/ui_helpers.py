@@ -30,7 +30,7 @@ def determine_icon(weather_code, is_day, gusts):
     
     """
     if gusts > WINDY and weather_code <=3:
-        icon_filepath = WEATHER_ICON_DIR / WIND
+        icon_filepath = WEATHER_ICON_DIR / WIND['file']
     elif is_day:
         icon_filepath = WEATHER_ICON_DIR / WEATHER_ICON_MAP.get(weather_code)['day']
     else:
@@ -46,7 +46,7 @@ def determine_description(weather_code, gusts):
     
     """
     if gusts > WINDY and weather_code <=3:
-        description = 'Windy'
+        description = WIND['description']
     else:
         description = WEATHER_DESCRIPTION_MAP.get(weather_code)
     

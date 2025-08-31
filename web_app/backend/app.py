@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from flask import jsonify, request
 from web_app.config import (
-     NF_CORE, WANTED_ELRS, WEBAPP_DB, FORECAST_LENGTH, get_model_for_station, get_bg_df_for_station
+     NF_CORE, WANTED_ELRS, WEBAPP_DB, FORECAST_LENGTH, get_model_for_station, get_baseline_for_station
     )
 import pandas as pd
 import geopandas as gpd
@@ -12,7 +12,7 @@ from web_app.database.db_utils.init_db import Station, HourlyForecast
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from datetime import datetime, timedelta, timezone
-from web_app.backend.flask_helpers import get_most_recent_forecast, get_overall_delay, get_station_reference_values, get_top_features 
+from web_app.backend.flask_helpers import get_most_recent_forecast, get_overall_delay, get_top_features 
 
 app = Flask(__name__)
 
@@ -206,12 +206,11 @@ def get_delay_risk():
                 .all()
         )
 
-        #get relevant model and background df
+        #get relevant model
         model = get_model_for_station(station_code)
-        bg_df = get_bg_df_for_station(station_code)
 
         #get referenc values
-        ref_values = get_station_reference_values(bg_df, station_code, model)
+        ref_values = get_baseline_for_station(station_code)
 
         # features to explain (exclude station_code)
         feature_list = [
@@ -244,7 +243,6 @@ def get_delay_risk():
 
             #get baseline risk
             baseline_risk = get_overall_delay(probs)
-
 
             # top drivers via OAT (Δpp)
             top_drivers = get_top_features(

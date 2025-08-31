@@ -85,39 +85,6 @@ def get_overall_delay(probs):
             continue
     return total
 
-def get_station_reference_values(bg_df, station_code, model):
-    """
-    gets the baselines (median) for weather featues
-
-    args:
-    - bg_df (dataframe): the testing dataframe with stoppings data for the past two years
-    - station_code(str): the three letter station code
-    - model : the trained model
-
-    returns:
-    - references (dict): the reference values
-    """
-
-    # station filter
-    bg_df = bg_df[bg_df["station"].astype(str).str.upper() == station_code]
-    sample_df = bg_df.sample(n=min(len(bg_df), 500))
-
-    # weather medians (station-specific)
-    def weather_med(col):
-
-        return float(pd.to_numeric(sample_df.get(col), errors="coerce").median())
-
-    ref_values = {
-        "station_code": station_code,
-        "temp_2m": weather_med("temperature_2m"),
-        "relative_humidity": weather_med("relative_humidity_2m"),
-        "rain": weather_med("rain"),
-        "gusts": weather_med("wind_gusts_10m"),
-        "snow_depth": weather_med("snow_depth"),
-        "surface_pressure": weather_med("surface_pressure"),
-    }
-    return ref_values
-
 def get_top_features(row, ref_values, feature_list, model, base_overall):
     """
     calculates the top feature drivers for a given hour using one-at-a-time (OAT) perturbation.
