@@ -8,21 +8,28 @@ st.set_page_config(layout="wide", page_title="DelayCast")
 
 st.title("DelayCast")
 
-
 try:
-    # Call Flask backend for station details
-    station_res = requests.get(f"{FLASK_API_URL}/all_stations")
-    #check for exceptions
-    station_res.raise_for_status()
-    station_data = station_res.json()
+    if 'station_data' not in st.session_state:
+        # Call Flask backend for station details
+        station_res = requests.get(f"{FLASK_API_URL}/all_stations")
+        #check for exceptions
+        station_res.raise_for_status()
+        station_data = station_res.json()
 
-    #add weather data
-    station_data = add_latest_weather(station_data)
+        #add weather data
+        station_data = add_latest_weather(station_data)
+        st.session_state['station_data'] = station_data
+    else:
+        station_data = st.session_state['station_data']
 
-    #call flask for line details
-    lines_res = requests.get(f"{FLASK_API_URL}/line_details")
-    lines_res.raise_for_status()
-    lines_data = lines_res.json()
+    if 'lines_data' not in st.session_state:
+        #call flask for line details
+        lines_res = requests.get(f"{FLASK_API_URL}/line_details")
+        lines_res.raise_for_status()
+        lines_data = lines_res.json()
+        st.session_state['lines_data'] = lines_data
+    else:
+        lines_data = st.session_state['lines_data'] 
 
     #build the select box mappings
     name_details_dict = map_name_to_details(station_data)

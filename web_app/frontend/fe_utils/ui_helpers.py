@@ -131,8 +131,6 @@ def station_weather_risk_forecast(station_code):
         print('Error: Problem fetching weather forecast from Flask')
         hourly_risk = []
 
-    route = get_route_code(station_code).lower()
-
     #get risk forecast
     try:
         risk_res = requests.get(f"{FLASK_API_URL}/delay_risk", params={"station_code": station_code})

@@ -167,3 +167,23 @@ GRAPH_CSS = """
         .graph-caption { text-align:center; color:#6b7280; font-size: 13px; margin-top: 2px; }
         </style>
     """
+
+LOADER_HTML = """
+            <style>
+            #global-loader { position: fixed; inset: 0; background: rgba(255,255,255,0.96);
+            z-index: 9999; display: flex; align-items: center; justify-content: center; }
+            .loader-box { text-align: center; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+            .loader-spinner { width: 72px; height: 72px; border: 6px solid #e6e6e6; border-top-color: #111;
+            border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            .loader-text { font-size: 22px; letter-spacing: 2px; font-weight: 700; }
+            .subtext { font-size: 14px; color: #555; margin-top: 6px; }
+            </style>
+            <div id="global-loader">
+            <div class="loader-box">
+                <div class="loader-spinner"></div>
+                <div class="loader-text">FORECASTING…</div>
+                <div class="subtext">Calculating weather impacts & delay risk</div>
+            </div>
+            </div>
+        """

@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 from web_app.frontend.fe_utils.ui_helpers import station_weather_risk_forecast, determine_weather_label, determine_time_graphs
 from datetime import datetime
-from web_app.config import TABLE_CSS, GRAPH_CSS
+from web_app.config import TABLE_CSS, GRAPH_CSS, LOADER_HTML
 
 st.set_page_config(layout="wide", page_title="Station Info")
 
@@ -15,19 +15,29 @@ if not station_code:
     station_code = st.session_state.get('station_code')
     st.query_params['station_code'] = station_code
 
+needs_fetch = ("data" not in st.session_state) or (st.session_state.get("data_station_code") != station_code)
+
+loader_slot = st.empty()
+if needs_fetch:
+    # show full-screen loader before fetchign forecast data
+    loader_slot.markdown(LOADER_HTML, unsafe_allow_html=True)
+
 #catch cases where station is still none and send home
 try:
-    if ("data" not in st.session_state) or (st.session_state.get("data_station_code") != station_code):
+    if needs_fetch:
         all_data = station_weather_risk_forecast(station_code)
         st.session_state["data"] = all_data
         st.session_state["data_station_code"] = station_code
     else:
         all_data = st.session_state["data"]
 except Exception as e:
+    loader_slot.empty()
     st.error("Oops! Something went wrong fetching station data. Please return to the home page.")
     if st.button("Back to Home", type="primary"):
         st.switch_page("dashboard.py")
     st.stop()
+finally:
+    loader_slot.empty()
 
 #home button
 if st.button("Back to Home", type="primary"):
