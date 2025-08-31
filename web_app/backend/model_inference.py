@@ -2,19 +2,19 @@ import json
 from pathlib import Path
 import joblib
 import pandas as pd
-import numpy as np
 
 class DelayRiskModel:
-    def __init__(self, model_dir: Path):
+    def __init__(self, model_dir):
         """
         Load the calibrated model along with featuers and class labels
         """
         model_dir = Path(model_dir)
-        self.model = joblib.load(model_dir / "glq_inv_model.joblib")
+        route_name = model_dir.name 
+        self.model = joblib.load(model_dir / f"{route_name}_model.joblib")
         self.feature_cols = json.loads((model_dir / "feature_columns.json").read_text())
         self.classes = json.loads((model_dir / "class_labels.json").read_text())
 
-    def _featurize(self, row: dict) -> pd.DataFrame:
+    def _featurize(self, row):
         """
         ensure the inputs are in the requried format
         """
@@ -30,7 +30,7 @@ class DelayRiskModel:
         df = df[self.feature_cols]
         return df
 
-    def predict_proba(self, row: dict) -> dict:
+    def predict_proba(self, row):
         """
         predicts the probabilities of each class - returned in json format
         """

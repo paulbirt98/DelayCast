@@ -1,9 +1,11 @@
+import json
+import joblib
 import pandas as pd
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import log_loss, brier_score_loss
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.calibration import calibration_curve, CalibratedClassifierCV
-from pipeline_utils.config import UNIFIED_ROUTES_DIR, INDIVIDUAL_ROUTES
+from pipeline_utils.config import MODELS_DIR, UNIFIED_ROUTES_DIR, INDIVIDUAL_ROUTES
 import numpy as np
 import matplotlib.pyplot as plt
 import numpy as np
@@ -146,3 +148,21 @@ if __name__ == '__main__':
 
         route_scores_unified = df_eval.groupby('route').apply(per_route_scores).sort_values('log_loss')
         print(route_scores_unified)
+
+    #save model to web_app
+    model_dir = MODELS_DIR / 'eus_liv'
+    model_dir.mkdir(parents=True, exist_ok=True)
+    model_save_path = model_dir / 'eus_liv_model'
+
+    #save model to file
+    joblib.dump(calibrator, model_dir / 'eus_liv_model.joblib')
+
+    #features
+    feature_columns = list(training_features.columns)
+    (model_dir / 'feature_columns.json').write_text(json.dumps(feature_columns))
+
+    #class labels
+    class_labels = list(calibrator.classes_)
+    (model_dir / 'class_labels.json').write_text(json.dumps(class_labels))
+
+    print('Model saved to web_app')

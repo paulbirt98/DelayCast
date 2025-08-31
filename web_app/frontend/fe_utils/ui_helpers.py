@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from zoneinfo import ZoneInfo
 import requests
-from web_app.config import FLASK_API_URL,WINDY
+from web_app.config import FLASK_API_URL,WINDY, get_route_code
 from web_app.frontend.icon_logic import WEATHER_ICON_MAP, WEATHER_ICON_DIR, WIND, WEATHER_DESCRIPTION_MAP
 import base64
 import streamlit as st
@@ -112,9 +112,11 @@ def station_weather_risk_forecast(station_code):
         print('Error: Problem fetching weather forecast from Flask')
         hourly_risk = []
 
+    route = get_route_code(station_code).lower()
+
     #get risk forecast
     try:
-        risk_res = requests.get(f"{FLASK_API_URL}/delay_risk_glq_inv", params={"station_code": station_code})
+        risk_res = requests.get(f"{FLASK_API_URL}/delay_risk", params={"station_code": station_code})
         risk_res.raise_for_status()
         risk_data = risk_res.json()
         hourly_risk = risk_data.get("hourly_risk", [])
@@ -135,7 +137,12 @@ def station_weather_risk_forecast(station_code):
         if 6 <= timestamp.hour <= 23:
             date_key = timestamp.date().isoformat()
             if date_key in forecast_days:   
-                forecast_days[date_key].append({"timestamp_utc": timestamp, "weather": hour["features"], "probs": hour["probs"]})
+                forecast_days[date_key].append({
+                    "timestamp_utc": timestamp, 
+                    "weather": hour["features"], 
+                    "probs": hour["probs"],
+                    "top_features": hour.get("top_features")
+                    })
         
 
     for date_key in forecast_days:
@@ -162,17 +169,17 @@ def station_weather_risk_forecast(station_code):
         "description": description,
     }
 
+def determine_weather_label(raw_name):
+    
+    ui_labels = {
+        "temp_2m": "Temperature",
+        "relative_humidity": "Humidity",
+        "rain": "Rain",
+        "gusts": "Wind Gusts",
+        "snow_depth": "Snow Depth",
+        "surface_pressure": "Pressure",
+    }
+    return ui_labels.get(raw_name)
 
-def _ensure_bundle(station_code):
-    """
-    Loads data once per station per session.
-    """
-    if ("bundle" not in st.session_state) or (st.session_state.get("bundle_station") != station_code):
-        st.session_state["bundle"] = station_weather_risk_forecast(station_code)
-        st.session_state["bundle_station"] = station_code
-    return st.session_state["bundle"]
 
-
-def _clamp(x, lo, hi):
-    return max(lo, min(hi, x))
 

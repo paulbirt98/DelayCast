@@ -2,18 +2,19 @@ from flask import Flask, request, send_from_directory
 import os
 from dotenv import load_dotenv
 from flask import jsonify, request
-from web_app.config import METADATA_DIR, NF_CORE, WANTED_ELRS, WEBAPP_DB, FORECAST_LENGTH
-import json
+from web_app.config import (
+    GLQ_BG_DF, GLQ_DELAY_MODEL, EUS_DELAY_MODEL, EUS_BG_DF, PAD_BG_DF,
+     PAD_DELAY_MODEL, BTN_DELAY_MODEL, BTN_BG_DF, NF_CORE, WANTED_ELRS, WEBAPP_DB, FORECAST_LENGTH, 
+     select_model, select_bg_df
+    )
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import LineString
-from web_app.database.db_utils.init_db import Station, Route, RouteStation, HourlyForecast
+from web_app.database.db_utils.init_db import Station, HourlyForecast
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine, func
-from datetime import date, datetime, timedelta, timezone
-from web_app.backend.flask_helpers import get_most_recent_forecast
-from web_app.backend.model_inference import DelayRiskModel
-from web_app.config import MODELS_DIR
+from sqlalchemy import create_engine
+from datetime import datetime, timedelta, timezone
+from web_app.backend.flask_helpers import get_most_recent_forecast, get_overall_delay, get_station_reference_values, get_top_features 
 
 app = Flask(__name__)
 
@@ -166,15 +167,16 @@ def get_location_forecast():
 
     return jsonify(forecast_object)
     
-GLQ_DELAY_MODEL = DelayRiskModel(MODELS_DIR / 'glq_inv')
 
-@app.route('/delay_risk_glq_inv')
-def get_delay_risk_glq_inv():
+
+@app.route('/delay_risk')
+def get_delay_risk():
 
     #get station code
     station_code = request.args.get('station_code').upper()
     if not station_code:
         return jsonify({"Error": "No Station Code given"}), 400
+    
     
     session = Session()
 
@@ -206,6 +208,18 @@ def get_delay_risk_glq_inv():
                 .all()
         )
 
+        #get relevant model and background df
+        model = select_model(station_code)
+        bg_df = select_bg_df(station_code)
+
+        #get referenc values
+        ref_values = get_station_reference_values(bg_df, station_code, station_code)
+
+        # features to explain (exclude station_code)
+        feature_list = [
+            "temp_2m", "relative_humidity", "rain", "gusts",
+            "snow_depth", "surface_pressure"
+        ]
 
         #build object to return - loop through each hour
         hourly_risk = []
@@ -222,17 +236,38 @@ def get_delay_risk_glq_inv():
                 "gusts": float(hour.gusts),
                 "snow_depth": float(hour.snow_depth),
                 "surface_pressure": float(hour.surface_pressure),
-                "weekday": int(timestamp.weekday()),
+                "day": int(timestamp.weekday()),
                 "month": int(timestamp.month),
                 "hour": int(timestamp.hour),
             }
 
             #calculate risk and create an object of timestamp and risk
-            probs = GLQ_DELAY_MODEL.predict_proba(features)  
+            probs = model.predict_proba(features)  
+
+            #get baseline risk
+            baseline_risk = get_overall_delay(probs)
+
+            #skip for non-disruptive weather
+
+
+            # top drivers via OAT (Δpp)
+            top_drivers = get_top_features(
+                features,
+                ref_values,
+                feature_list,
+                model,
+                baseline_risk
+            )
+
+            app.logger.info(
+                f"[DEBUG] Station {station_code} | Time {timestamp_str} | Baseline risk: {baseline_risk:.2%} | Top features: {top_drivers}"
+            )
+
             hourly_risk.append({
                 "timestamp_utc": timestamp_str,
                 "features": features,
-                "probs": probs
+                "probs": probs,
+                "top_features": top_drivers
             })
         
         if not hourly_risk:

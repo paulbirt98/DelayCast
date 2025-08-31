@@ -1,7 +1,7 @@
 from email.utils import parsedate_to_datetime
 import requests
 import streamlit as st
-from web_app.frontend.fe_utils.ui_helpers import determine_icon, determine_description, station_weather_risk_forecast
+from web_app.frontend.fe_utils.ui_helpers import determine_icon, determine_description, station_weather_risk_forecast, determine_weather_label
 from web_app.config import FLASK_API_URL
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -14,16 +14,12 @@ station_code = st.query_params.get("station_code")
 #let station code persist if refreshed
 if not station_code:
     station_code = st.session_state.get('station_code')
-    st.query_params['station_code'] = station_code 
+    st.query_params['station_code'] = station_code
 
-#gather all necessary data and persist in session state
-if "data" not in st.session_state:
-    try:
-        all_data = station_weather_risk_forecast(station_code)
-    except Exception as e:
-        st.error(f"Failed to load data for {station_code}: {e}")
-        st.stop()
+if ("data" not in st.session_state) or (st.session_state.get("data_station_code") != station_code):
+    all_data = station_weather_risk_forecast(station_code)
     st.session_state["data"] = all_data
+    st.session_state["data_station_code"] = station_code
 else:
     all_data = st.session_state["data"]
 
@@ -163,34 +159,56 @@ with current_delay_risk_col:
             unsafe_allow_html=True
         )
     
+    # weather impacts on the current hour delay risk
+    current_weather_influences = (all_data.get('hourly_risk', []) or [])
+    current_weather_influences = current_weather_influences[0].get("top_features", []) if current_weather_influences else []
+
+    # get only non zero and up to 3
+    current_weather_influences = [influence for influence in current_weather_influences if abs(influence.get('pp')) != 0][:3]
+
+    if current_weather_influences:
+        influences_pps = " • ".join(f"{determine_weather_label(influence['feature'])} {influence['pp']:+.0f}pp" for influence in current_weather_influences)
+        st.markdown(
+            f"""
+            <div style="text-align:center; line-height:1.7; padding-bottom:20px">
+                <span style="font-weight:600;">Weather Influence:</span><br/>
+                <span>{influences_pps}</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    
 #inject styling for the tab layout to centre tabs and space tem out
-st.markdown("""
-    <style>
-    div[data-baseweb="tab-list"] {
-        display: flex;
-        justify-content: space-between;
-        width: 100%;
-    }
+st.markdown(
+    """
+        <style>
+        div[data-baseweb="tab-list"] {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
 
-    div[data-baseweb="tab"] {
-        flex: 1;
-        text-align: center;
-        font-weight: bold;
-        font-size: 14px;
-    }
+        div[data-baseweb="tab"] {
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
 
-    div[data-baseweb="tab"]:hover {
-        background-color: #f0f0f0;
-        border-radius: 5px;
-    }
-            
-    div[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #004080;
-        color: white;
-        border-radius: 5px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+        div[data-baseweb="tab"]:hover {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+                
+        div[data-baseweb="tab"][aria-selected="true"] {
+            background-color: #004080;
+            color: white;
+            border-radius: 5px;
+        }
+        </style>
+    """,
+    unsafe_allow_html=True)
 
 #delay risk forecast for next 5 days display
 forecast_by_day = all_data.get("forecast_by_day", {}) 
@@ -220,18 +238,24 @@ for tab, day in zip(tabs, days):
         table = {
             "": [
                 "Delay Risk (>5mins)",
+                "Weather Influence #1",
+                "Weather Influence #2",
+                "Weather Influence #3",
                 "Moderate Delay(>15mins)",
                 "Severe Delay(>30mins)",
                 "Temperature",
                 "Humidity",
                 "Rain (Previous Hour - mm)",
                 "Surface Pressure (hPa)",
-                "Snow Depth"
+                "Snow Depth",
             ]
         }
 
         # get lsits for each row
         delay_row = []
+        influence_row_1 =[]
+        influence_row_2 =[]
+        influence_row_3 =[]
         moderate_row = []
         severe_row = []
         temp_row = []
@@ -254,10 +278,29 @@ for tab, day in zip(tabs, days):
             pressure_row.append(f'{round(weather.get("surface_pressure", 0))}')
             snow_row.append(f'{round(weather.get("snow_depth")*100, 1)}')
 
+            #add weather influence if applicable
+            influences = hour.get("top_features") or []
+            influences = [influence for influence in influences if abs(influence.get("pp", 0)) != 0][:3]
+
+            influence_count = len(influences)
+
+            # format helper
+            def format_influence(influence):
+                name = determine_weather_label(influence.get("feature")) or str(influence.get("feature")).replace("_", " ").title()
+                return f"{name} {influence.get('pp', 0):+0.0f}pp"
+
+            # fill 3 slots
+            influence_row_1.append(format_influence(influences[0]) if len(influences) >= 1 else "N/A")
+            influence_row_2.append(format_influence(influences[1]) if len(influences) >= 2 else "N/A")
+            influence_row_3.append(format_influence(influences[2]) if len(influences) >= 3 else "N/A")
+    
         # Add hour columns with values 
         for index, hour in enumerate(hour_labels):
             table[hour] = [
                 delay_row[index],
+                influence_row_1[index],
+                influence_row_2[index],
+                influence_row_3[index],
                 moderate_row[index],
                 severe_row[index],
                 temp_row[index],
@@ -266,6 +309,9 @@ for tab, day in zip(tabs, days):
                 pressure_row[index],
                 snow_row[index]
             ]
+
+        #config column width to avoid cut offs
+        col_cfg = {h: st.column_config.TextColumn(h, width=220) for h in hour_labels}
 
         # Display with hours as columns
         st.dataframe(table, use_container_width=True)
