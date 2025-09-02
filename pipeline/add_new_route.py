@@ -47,7 +47,10 @@ rid_df = fetch_rids(from_location, to_location, toc, FROM_DATE, TO_DATE, testing
 train_data_df = fetch_train_times(rid_df, avoid)
 
 #build filepath to save raw data to
-save_file_path = RAW_DATA / f'{from_location.lower()}_{to_location.lower()}_raw.csv'
+if testing:
+    save_file_path = RAW_DATA / f'TEST_{from_location.lower()}_{to_location.lower()}_raw.csv'
+else:
+    save_file_path = RAW_DATA / f'{from_location.lower()}_{to_location.lower()}_raw.csv'
 
 try:
     train_data_df.to_csv(save_file_path, index=False)

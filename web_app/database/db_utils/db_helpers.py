@@ -1,10 +1,7 @@
 import json
-from shapely.geometry import LineString
 from flask import jsonify
-from web_app.config import METADATA_DIR, NF_CORE, WANTED_ELRS, STOPPINGS_DATA
+from web_app.config import METADATA_DIR
 from init_db import Station, Route, RouteStation
-import pandas as pd
-from tqdm import tqdm
 
 def get_all_stations():
     """

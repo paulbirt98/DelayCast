@@ -41,7 +41,7 @@ try:
 
     #default map zoom
     centre = (-3.0, 54.5)  
-    zoom = 5.8
+    zoom = 4.5
     selected_code = None
 
     with column_one:

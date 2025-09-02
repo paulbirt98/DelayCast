@@ -9,7 +9,20 @@ route = 'glq_inv'
 route_filepath = INDIVIDUAL_ROUTES / route / f'{route}_route.csv'
 
 #read file and recalculate delay classes
-data = pd.read_csv(route_filepath)
+try:
+    data = pd.read_csv(route_filepath)
+except FileNotFoundError:
+        print(f"Error: File {route_filepath} not found")
+        raise
+except pd.errors.ParserError:
+    print(f"Error parsing file {route_filepath}")
+    raise
+except PermissionError:
+    print(f"Permission Error with file {route_filepath}. Ensure the file is not open elsewhere.")
+    raise
+except Exception as e:
+    print(f"Unexpected error reading file {route_filepath}: {e}")
+
 data['delay_classification'] = data['delay_minutes'].apply(calculate_delay_classification)
 
 # Temperature bins

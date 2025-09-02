@@ -20,7 +20,22 @@ def tvt_split(route):
     #assign and create file and directory paths accordingly
     route_directory = INDIVIDUAL_ROUTES / route
     route_directory.mkdir(parents=True, exist_ok=True)
-    dataset = pd.read_csv(route_directory / f'{route}_route.csv', parse_dates=['scheduled_time'])
+
+    file = route_directory / f'{route}_route.csv'
+
+    try:
+        dataset = pd.read_csv(file, parse_dates=['scheduled_time'])
+    except FileNotFoundError:
+        print(f"Error: File {file} not found")
+        raise
+    except pd.errors.ParserError:
+        print(f"Error parsing file {file}")
+        raise
+    except PermissionError:
+        print(f"Permission Error with file {file}. Ensure the file is not open elsewhere.")
+        raise
+    except Exception as e:
+        print(f"Unexpected error reading file {file}: {e}")
 
     training_file = route_directory / f'{route}_training_data.csv'
     validation_file = route_directory / f'{route}_validation_data.csv'

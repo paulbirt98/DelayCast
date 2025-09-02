@@ -8,8 +8,19 @@ time_periods = ['hour', 'day', 'month']
 for directory in INDIVIDUAL_ROUTES.iterdir():
     for file in directory.iterdir():
         if file.name.endswith('_testing_data.csv'):
-
-            df = pd.read_csv(file)
+            try:
+                df = pd.read_csv(file)
+            except FileNotFoundError:
+                print(f"Error: File not found")
+                raise
+            except pd.errors.ParserError:
+                print(f"Error parsing file")
+                raise
+            except PermissionError:
+                print(f"Permission Error with file. Ensure the file is not open elsewhere.")
+                raise
+            except Exception as e:
+                print(f"Unexpected error reading file: {e}")
 
             for station in df['station'].dropna().unique():
 

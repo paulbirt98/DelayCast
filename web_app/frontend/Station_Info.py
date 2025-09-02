@@ -318,7 +318,8 @@ for tab, day in zip(tabs, days):
             disabled=True,  
             column_config={
                 col: st.column_config.TextColumn(
-                    col
+                    col,
+                    width='medium'
                 ) for col in df.columns
             }
         )

@@ -6,7 +6,7 @@ from pipeline_utils.config import (
     RECORDING_ERROR_MIN, 
     RECORDING_ERROR_MAX, 
     NO_DELAY_UPPER_BOUNDARY, 
-    MILD_DELAY_UPPER_BOUNDARY, 
+    MINOR_DELAY_UPPER_BOUNDARY, 
     MODERATE_DELAY_UPPER_BOUNDARY, 
     METADATA, 
     RAW_DATA,
@@ -366,9 +366,9 @@ def calculate_delay_classification(delay_minutes):
         return "Issue Classifying"
     elif delay_minutes < NO_DELAY_UPPER_BOUNDARY:
         return "No Delay"
-    elif NO_DELAY_UPPER_BOUNDARY <= delay_minutes < MILD_DELAY_UPPER_BOUNDARY:
+    elif NO_DELAY_UPPER_BOUNDARY <= delay_minutes < MINOR_DELAY_UPPER_BOUNDARY:
         return "Minor Delay"
-    elif MILD_DELAY_UPPER_BOUNDARY <= delay_minutes < MODERATE_DELAY_UPPER_BOUNDARY:
+    elif MINOR_DELAY_UPPER_BOUNDARY <= delay_minutes < MODERATE_DELAY_UPPER_BOUNDARY:
         return "Moderate Delay"
     elif delay_minutes >= MODERATE_DELAY_UPPER_BOUNDARY:
         return "Severe Delay"

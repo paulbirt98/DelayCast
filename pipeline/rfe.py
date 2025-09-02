@@ -44,13 +44,36 @@ if __name__ == '__main__':
         route = args.route.lower()
 
         route_filepath = INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv'
-
-        dataset = pd.read_csv(route_filepath)
+        try:
+            dataset = pd.read_csv(route_filepath)
+        except FileNotFoundError:
+            print(f"Error: File not found")
+            raise
+        except pd.errors.ParserError:
+            print(f"Error parsing file")
+            raise
+        except PermissionError:
+            print(f"Permission Error with file. Ensure the file is not open elsewhere.")
+            raise
+        except Exception as e:
+            print(f"Unexpected error reading file: {e}")
 
     else:
         kept_categorical_features = kept_categorical_features + ['route']
         filepath = UNIFIED_ROUTES_DIR / 'unified_training_data.csv'
-        dataset = pd.read_csv(filepath)
+        try:
+            dataset = pd.read_csv(filepath)
+        except FileNotFoundError:
+            print(f"Error: File not found")
+            raise
+        except pd.errors.ParserError:
+            print(f"Error parsing file")
+            raise
+        except PermissionError:
+            print(f"Permission Error with file. Ensure the file is not open elsewhere.")
+            raise
+        except Exception as e:
+            print(f"Unexpected error reading file: {e}")
 
     #prepare features
     numerical_features = dataset[kept_numerical_features]

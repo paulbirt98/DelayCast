@@ -50,7 +50,23 @@ if __name__ == '__main__':
     #if no route given, run tests on the unified dataset
     if route:
         route = route.lower()
-        dataset = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned.csv')
+
+        file = INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned.csv'
+
+        try:
+            dataset = pd.read_csv(file)
+        except FileNotFoundError:
+            print(f"Error: File {file} not found")
+            raise
+        except pd.errors.ParserError:
+            print(f"Error parsing file {file}")
+            raise
+        except PermissionError:
+            print(f"Permission Error with file {file}. Ensure the file is not open elsewhere.")
+            raise
+        except Exception as e:
+            print(f"Unexpected error reading file {file}: {e}")
+        
         folder = FS_RESULTS / route / 'binned'
         folder.mkdir(parents=True, exist_ok=True) # make folder if it doesnt exist
         anova_filepath = folder / f'{route}_anova_binned.csv'
@@ -59,7 +75,21 @@ if __name__ == '__main__':
     else:
         route = 'all_routes'
         kept_categorical_features = kept_categorical_features + ['route']
-        dataset = pd.read_csv(UNIFIED_ROUTES_DIR / 'unified_training_data.csv')
+        file = UNIFIED_ROUTES_DIR / 'unified_training_data.csv'
+        try:
+            dataset = pd.read_csv(file)
+        except FileNotFoundError:
+            print(f"Error: File {file} not found")
+            raise
+        except pd.errors.ParserError:
+            print(f"Error parsing file {file}")
+            raise
+        except PermissionError:
+            print(f"Permission Error with file {file}. Ensure the file is not open elsewhere.")
+            raise
+        except Exception as e:
+            print(f"Unexpected error reading file {file}: {e}")
+
         folder = ALL_ROUTE_FS
         anova_filepath = folder / f'{route}_anova.csv'
         chi_filepath = folder / f'{route}_chi.csv'

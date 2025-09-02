@@ -12,15 +12,38 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import log_loss
 from pipeline_utils.tvt_helpers import report_logloss_skill, report_brier, expected_calibration_error, per_bin_calibration
+import argparse
 
+def parse_cl_arguments():
+    """
+
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--save_to_web", action="store_true")
+    return parser.parse_args()
+
+args = parse_cl_arguments()
+save_to_web = args.save_to_web
 
 if __name__ == '__main__':
     
     route = 'btn_bdm'
     #load data
-    train = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv')
-    val = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_validation_data.csv')
-    test = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_testing_data.csv')
+    try:
+        train = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_training_data.csv')
+        val = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_validation_data.csv')
+        test = pd.read_csv(INDIVIDUAL_ROUTES / route / f'{route}_testing_data.csv')
+    except FileNotFoundError:
+        print(f"Error: File not found")
+        raise
+    except pd.errors.ParserError:
+        print(f"Error parsing file")
+        raise
+    except PermissionError:
+        print(f"Permission Error with file. Ensure the file is not open elsewhere.")
+        raise
+    except Exception as e:
+        print(f"Unexpected error reading file: {e}")
 
     train = train.drop(columns=['route'])
     val = val.drop(columns=['route'])
@@ -120,50 +143,21 @@ if __name__ == '__main__':
                 f"bin_confidence={r['bin_confidence']:.3f} actual_frequency={r['bin_actual_freq']:.3f} "
                 f"gap={r['gap']:.3f} contribution={r['contribution']:.4f}")
 
-    if not route:
+    if save_to_web:
+        #save model to web_app
+        model_dir = MODELS_DIR / 'btn_bdm'
+        model_dir.mkdir(parents=True, exist_ok=True)
+        model_save_path = model_dir / 'btn_bdm_model'
 
-        from sklearn.metrics import log_loss, brier_score_loss, f1_score
-        from sklearn.preprocessing import label_binarize
+        #save model to file
+        joblib.dump(calibrator, model_dir / 'btn_bdm_model.joblib', compress=0)
 
-        routes = test['route'].to_numpy()
-        P = probs
-        K = len(class_labels)
+        #features
+        feature_columns = list(training_features.columns)
+        (model_dir / 'feature_columns.json').write_text(json.dumps(feature_columns))
 
-        df_eval = pd.DataFrame(P, columns=class_labels)
-        df_eval['route'] = routes
-        df_eval['y_true_int'] = testing_target_encoded
+        #class labels
+        class_labels = list(calibrator.classes_)
+        (model_dir / 'class_labels.json').write_text(json.dumps(class_labels))
 
-        def per_route_scores(g):
-            y_true_int = g['y_true_int'].to_numpy()
-            P_g = g[class_labels].to_numpy()
-
-            # multiclass log loss
-            ll = log_loss(y_true_int, P_g, labels=range(K))
-
-            # macro Brier across classes
-            Ybin = label_binarize(y_true_int, classes=range(K))
-            briers = [brier_score_loss(Ybin[:,k], P_g[:,k]) for k in range(K)]
-            brier_macro = float(np.mean(briers))
-
-            return pd.Series({"log_loss": ll, "brier_macro": brier_macro})
-
-        route_scores_unified = df_eval.groupby('route').apply(per_route_scores).sort_values('log_loss')
-        print(route_scores_unified)
-
-    #save model to web_app
-    model_dir = MODELS_DIR / 'btn_bdm'
-    model_dir.mkdir(parents=True, exist_ok=True)
-    model_save_path = model_dir / 'btn_bdm_model'
-
-    #save model to file
-    joblib.dump(calibrator, model_dir / 'btn_bdm_model.joblib', compress=0)
-
-    #features
-    feature_columns = list(training_features.columns)
-    (model_dir / 'feature_columns.json').write_text(json.dumps(feature_columns))
-
-    #class labels
-    class_labels = list(calibrator.classes_)
-    (model_dir / 'class_labels.json').write_text(json.dumps(class_labels))
-
-    print('Model saved to web_app')
+        print('Model saved to web_app')

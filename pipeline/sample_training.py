@@ -25,7 +25,18 @@ if __name__ == '__main__':
 
     args = argparse_cl_arguments()
     route = args.route
-
-    training_df = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_training_data.csv')
+    try:
+        training_df = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_training_data.csv')
+    except FileNotFoundError:
+        print(f"Error: File not found")
+        raise
+    except pd.errors.ParserError:
+        print(f"Error parsing file")
+        raise
+    except PermissionError:
+        print(f"Permission Error with file. Ensure the file is not open elsewhere.")
+        raise
+    except Exception as e:
+        print(f"Unexpected error reading file: {e}")
 
     sample_for_training(route, training_df, GLQ_LOW_TEMP, GLQ_HIGH_TEMP, GLQ_HIGH_GUSTS, GLQ_LOW_PRESSURE, GLQ_HIGH_PRESSURE, GLQ_HEAVY_RAIN)

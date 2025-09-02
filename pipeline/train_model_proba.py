@@ -23,23 +23,34 @@ if __name__ == '__main__':
     route = args.route
 
     #load either route or unified dataset
-    if route:
-        route = route.lower()
-        train = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_training_data.csv')
-        val = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_validation_data.csv')
-        test = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_testing_data.csv')
+    try:
+        if route:
+            route = route.lower()
+            train = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_training_data.csv')
+            val = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_validation_data.csv')
+            test = pd.read_csv(INDIVIDUAL_ROUTES / route / 'binned' / f'{route}_binned_testing_data.csv')
 
-    else:
-        route = 'unified_routes'
-        train = pd.read_csv(UNIFIED_ROUTES_DIR / f'{route}_training_data.csv')
-        val = pd.read_csv(UNIFIED_ROUTES_DIR / f'{route}_validation_data.csv')
-        test = pd.read_csv(UNIFIED_ROUTES_DIR / f'{route}_testing_data.csv')
+        else:
+            route = 'unified_routes'
+            train = pd.read_csv(UNIFIED_ROUTES_DIR / f'{route}_training_data.csv')
+            val = pd.read_csv(UNIFIED_ROUTES_DIR / f'{route}_validation_data.csv')
+            test = pd.read_csv(UNIFIED_ROUTES_DIR / f'{route}_testing_data.csv')
 
-        #remove btnbdm
-        train = train[train['route'] != 'btn_bdm']
-        val = val[val['route'] != 'btn_bdm']
-        test = test[test['route'] != 'btn_bdm']
-
+            #remove btnbdm
+            train = train[train['route'] != 'btn_bdm']
+            val = val[val['route'] != 'btn_bdm']
+            test = test[test['route'] != 'btn_bdm']
+    except FileNotFoundError:
+        print(f"Error: File not found")
+        raise
+    except pd.errors.ParserError:
+        print(f"Error parsing file")
+        raise
+    except PermissionError:
+        print(f"Permission Error with file. Ensure the file is not open elsewhere.")
+        raise
+    except Exception as e:
+        print(f"Unexpected error reading file: {e}")
 
     # drop all non-feature columns
     drop_cols = ['rid', 'date_x', 'scheduled_time', 'actual_time', 'lc_reason', 'delay_classification', 

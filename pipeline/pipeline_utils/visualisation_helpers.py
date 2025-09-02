@@ -41,7 +41,7 @@ def plot_stacked_delay_by_binned_feature(df, feature, bins, labels, target_col='
     else:
         plt.show()
 
-def plot_delay_time_period(station_df, station, time_period_col, target_col='delay_classification', filepath=None):
+def plot_delay_time_period(station_df, station, time_period_col, target_col='delay_classification', min_count=5, filepath=None):
     """
     Plots delays as a line graph for the given station and given time feature column (i.e. hour, day, or month)
 
@@ -77,6 +77,10 @@ def plot_delay_time_period(station_df, station, time_period_col, target_col='del
 
     #count the values in each delay class per period
     value_counts =  (station_df.groupby(["label", target_col], observed=False).size().unstack(fill_value=0))
+
+    #min to avoid erratic graphs
+    totals = value_counts.sum(axis=1)
+    value_counts = value_counts[totals >= min_count]
 
     #ensure ony those that appear are plotted
     order = [label for label in order if label in value_counts.index]

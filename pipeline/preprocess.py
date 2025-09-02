@@ -25,9 +25,6 @@ def parse_cl_arguments():
         parses command-line arguments so they are accessible within the add_new_route script
 
         Args:
-        - read from command line
-
-        Command-line Arguments:
         - --from_location(str): the origin station of the raw dataset to be processed
         - --to_location(Str): the terminus station of teh raw dataset to be processed
 
@@ -119,17 +116,17 @@ if __name__ == "__main__":
     #get weather data and join
     print(f"Shape before merging with weather: {stoppings_df.shape}")
 
-    """
+    
     #check if weather csv already exists
     weather_filepath = RAW_DATA / f'{from_location}_{to_location}_weather.csv'
 
     if weather_filepath.is_file():
         weather_df = pd.read_csv(RAW_DATA / f'{from_location}_{to_location}_weather.csv', parse_dates=['date'])
-    else:"""
+    else:
     
-    weather_df = get_weather_data(stoppings_df, station_coords, from_location, to_location)
+        weather_df = get_weather_data(stoppings_df, station_coords, from_location, to_location)
 
-    merged_df = join_train_weather_data(stoppings_df, weather_df, from_location, to_location)
+        merged_df = join_train_weather_data(stoppings_df, weather_df, from_location, to_location)
 
-    print(f"Shape after merging with weather: {merged_df.shape}")
+        print(f"Shape after merging with weather: {merged_df.shape}")
 

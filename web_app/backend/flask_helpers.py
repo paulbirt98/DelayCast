@@ -45,26 +45,6 @@ def get_most_recent_forecast(session, station, now):
 
     return most_recent
 
-def get_top_features(feature_contributions, feature_names, k=3):
-    """
-    Calculates the top three features in terms of magnitude contributing to the probability prediction.
-
-    Args:
-    - feature_contributions (array): an array of feature contribution values
-    - feature_names (list - str): a list of feature names
-
-    returns:
-    - output (list - dict): a list of dictionaries of feature with its corresponding contribution
-    """
-    idx = np.argsort(np.abs(feature_contributions))[::-1][:k]
-    output = []
-    for i in idx:
-        output.append({
-            "feature": str(feature_names[i]),
-            "pp": float(feature_contributions[i] * 100.0)
-        })
-    return output
-
 def get_overall_delay(probs):
     """
     Sums the probabilities (probs) of all delay classes

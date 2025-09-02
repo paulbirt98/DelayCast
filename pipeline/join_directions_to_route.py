@@ -11,9 +11,6 @@ def parse_cl_arguments():
         parses command-line arguments so they are accessible within the add_new_route script
 
         Args:
-        - read from command line
-
-        Command-line Arguments:
         - --startpoint(str): one end of the route to be joined together - this will form the first three letters in the resulting route identifier
         (e.g. the glq in 'glq_inv').
         - --endpoint(str): the other end of the route to be joined together - this will form the last three letters in the resulting route identifier

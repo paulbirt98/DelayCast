@@ -74,7 +74,19 @@ def line_details():
 
     #get netwrok fusion file path and read to dataframe
     nf_filepath = NF_CORE
-    lines_df = pd.read_csv(nf_filepath)
+    try:
+        lines_df = pd.read_csv(nf_filepath)
+    except FileNotFoundError:
+        print(f"Error: File {nf_filepath} not found")
+        raise
+    except pd.errors.ParserError:
+        print(f"Error parsing file {nf_filepath}")
+        raise
+    except PermissionError:
+        print(f"Permission Error with file {nf_filepath}. Ensure the file is not open elsewhere.")
+        raise
+    except Exception as e:
+        print(f"Unexpected error reading file {nf_filepath}: {e}")
 
     line_details = []
 
@@ -244,7 +256,7 @@ def get_delay_risk():
             #get baseline risk
             baseline_risk = get_overall_delay(probs)
 
-            # top drivers via OAT (Δpp)
+            # top drivers via OAT
             top_drivers = get_top_features(
                 features,
                 ref_values,

@@ -3,11 +3,6 @@ from pipeline_utils.config import (
     INDIVIDUAL_ROUTES,
     UNIFIED_ROUTES_DIR,
     UNIFIED_ROUTES_FILE,
-    ROUTE_VALIDATION,
-    ROUTE_TESTING,
-    ALL_TRAINING,
-    ALL_VALIDATION,
-    ALL_TESTING,
     TRAINING_RATIO,
     VALIDATION_RATIO,
 )
@@ -49,7 +44,10 @@ if __name__ == '__main__':
         testing_file = route_directory / f'{route}_testing_data.csv'
 
     else:
-        dataset = pd.read_csv(UNIFIED_ROUTES_FILE, parse_dates=['scheduled_time'])
+        try:
+            dataset = pd.read_csv(UNIFIED_ROUTES_FILE, parse_dates=['scheduled_time'])
+        except Exception as e:
+            print(f"Error reading file: {e}")
         training_file = UNIFIED_ROUTES_DIR / 'unified_training_data.csv'
         validation_file = UNIFIED_ROUTES_DIR / 'unified_validation_data.csv'
         testing_file = UNIFIED_ROUTES_DIR / 'unified_testing_data.csv'
