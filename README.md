@@ -57,7 +57,7 @@ Ensure you're in the project root directory - this is vital to ensure the follow
 Set up and activate a Virtual Environment by running 'python -m venv .venv'.
 Then run '.venv\Scripts\Activate' - if on a Windows Machine.
 
-Install all dependencies by running 'pip install -r requirements.txt'
+Install all dependencies by running 'pip install -r requirements.txt' , then 'pip install -e'.
 
 Once this is all set up, to run a script ensure you include the parent directories - e.g. 'pipeline/preprocess.py'. With Command Line Arguments this would be as so: 'pipeline/preprocess.py --from_location glq --to_location inv
 
